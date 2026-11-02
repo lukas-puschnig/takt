@@ -42,3 +42,14 @@ src/
 ## Deployment
 
 Push auf `main` baut und veröffentlicht über GitHub Actions auf GitHub Pages (`BASE_PATH` wird aus dem Repo-Namen gesetzt). In den Repo-Einstellungen unter _Pages_ als Quelle „GitHub Actions“ wählen.
+
+## Datenschutz
+
+- **Keine Daten verlassen das Gerät.** Routinen, Verlauf und Einstellungen liegen nur im `localStorage` des Browsers. Es gibt kein Konto, kein Tracking, keine Analytics und keine Cookies.
+- **Keine Anfragen an Dritte.** Schriften und Icons sind im Build enthalten, es werden keine externen Ressourcen (z. B. Google Fonts oder CDNs) geladen.
+- **Hosting:** Beim Abruf über GitHub Pages verarbeitet GitHub technisch bedingt Verbindungsdaten wie die IP-Adresse ([GitHub Privacy Statement](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement)). Nach der Installation läuft die App offline aus dem Cache.
+- **Export/Import** erzeugt bzw. liest nur lokale JSON-Dateien. Ein späterer Sync (Nextcloud) wird optional und die Zugangsdaten bleiben im Browser.
+
+## Lizenz
+
+[MIT](LICENSE). Fremdbestandteile und ihre Lizenzen: [docs/LIZENZEN.md](docs/LIZENZEN.md).

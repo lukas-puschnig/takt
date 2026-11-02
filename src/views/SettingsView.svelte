@@ -164,5 +164,13 @@
     </button>
   </div>
 
-  <p class="text-center text-small text-text-muted">Takt {__APP_VERSION__}</p>
+  <p class="text-center text-small text-text-muted">
+    Takt {__APP_VERSION__} ·
+    <a
+      class="underline"
+      href="https://github.com/lukas-puschnig/takt/blob/main/docs/LIZENZEN.md"
+      target="_blank"
+      rel="noopener">Lizenzen</a
+    >
+  </p>
 </section>

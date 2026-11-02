@@ -37,7 +37,7 @@ Wiederkehrende Aufgaben nach dem Vorbild der Habitica-Dailies, aber ohne Spielme
 - Design System / Hell / Dunkel.
 - Reihenfolge der Routinen, Export/Import als JSON, alles löschen.
 
-**Serien-Logik:** Gezählt werden aufeinanderfolgende *fällige* Tage, an denen die Routine komplett war. Nicht fällige Tage werden übersprungen, ein noch offener heutiger Tag bricht die Serie nicht. Beim Abhaken wird der Erledigt-Status als Momentaufnahme gespeichert, damit spätere Änderungen an den Schritten den Verlauf nicht umschreiben.
+**Serien-Logik:** Gezählt werden aufeinanderfolgende _fällige_ Tage, an denen die Routine komplett war. Nicht fällige Tage werden übersprungen, ein noch offener heutiger Tag bricht die Serie nicht. Beim Abhaken wird der Erledigt-Status als Momentaufnahme gespeichert, damit spätere Änderungen an den Schritten den Verlauf nicht umschreiben.
 
 **Ideen für später** ⏳
 
