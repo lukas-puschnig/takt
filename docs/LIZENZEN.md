@@ -1,6 +1,8 @@
 # Lizenzen
 
-Takt selbst steht unter der [MIT-Lizenz](../LICENSE). Das gilt auch für das Logo und die Marken-Dateien in `src/assets/brand`.
+Der Code von Takt steht unter der [MIT-Lizenz](../LICENSE).
+
+**Ausgenommen sind Logo, Wortmarke und App-Icons** (`src/assets/brand/`, `public/favicon.svg`, `public/icons/`). Sie sind © 2026 Lukas Puschnig, alle Rechte vorbehalten, und dürfen nur unverändert als Teil dieser Software verwendet werden. Wer einen Fork veröffentlicht, ersetzt sie bitte durch eigene.
 
 ## In der App ausgelieferte Fremdbestandteile
 

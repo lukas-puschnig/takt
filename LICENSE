@@ -19,3 +19,10 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+---
+
+The MIT License above does not apply to the Takt logo, wordmark and app icons
+(src/assets/brand/, public/favicon.svg, public/icons/). These are
+Copyright (c) 2026 Lukas Puschnig, all rights reserved. They may only be
+used unmodified as part of this software; any other use requires permission.

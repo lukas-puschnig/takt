@@ -52,4 +52,4 @@ Push auf `main` baut und veröffentlicht über GitHub Actions auf GitHub Pages (
 
 ## Lizenz
 
-[MIT](LICENSE). Fremdbestandteile und ihre Lizenzen: [docs/LIZENZEN.md](docs/LIZENZEN.md).
+Code: [MIT](LICENSE). Logo, Wortmarke und App-Icons sind davon ausgenommen (alle Rechte vorbehalten). Fremdbestandteile und ihre Lizenzen: [docs/LIZENZEN.md](docs/LIZENZEN.md).
