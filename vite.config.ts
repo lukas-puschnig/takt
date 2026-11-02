@@ -5,8 +5,8 @@ import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 import pkg from './package.json' with { type: 'json' }
 
-// Für GitHub Pages wird BASE_PATH im Deploy-Workflow gesetzt (z. B. "/takt/").
-const base = process.env.BASE_PATH ?? '/'
+// Projektseite auf GitHub Pages: user.github.io/takt/. Der Deploy-Workflow setzt BASE_PATH ebenfalls.
+const base = process.env.BASE_PATH ?? '/takt/'
 
 export default defineConfig({
   base,
@@ -24,6 +24,7 @@ export default defineConfig({
         short_name: 'Takt',
         description: 'Fokus-Blöcke und tägliche Routinen.',
         lang: 'de',
+        id: base,
         start_url: base,
         scope: base,
         display: 'standalone',
@@ -40,7 +41,12 @@ export default defineConfig({
           },
         ],
       },
+      injectRegister: 'script',
       workbox: {
+        cacheId: 'takt-v2',
+        cleanupOutdatedCaches: true,
+        // Löscht Caches, die nicht zu dieser App gehören (z. B. alte Namen).
+        importScripts: ['sw-cleanup.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
