@@ -45,8 +45,6 @@ export default defineConfig({
       workbox: {
         cacheId: 'takt-v2',
         cleanupOutdatedCaches: true,
-        // Löscht Caches, die nicht zu dieser App gehören (z. B. alte Namen).
-        importScripts: ['sw-cleanup.js'],
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
       },
     }),
