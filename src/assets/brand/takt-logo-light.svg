@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512" fill="none" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"><title>Takt Logo</title>
+<g stroke="#D61F8C">
+<path d="M100 48 C94 48 89 49 86 50 L75 26 Q72 21 70 26 L66 52 C62 60 60 66 60 72 C60 84 82 104 100 108"></path>
+<path d="M73 93 C75 120 74 150 76 178 H100"></path>
+<path d="M92 152 V178"></path>
+<path d="M64 91 L48 88 M65 97 L50 101"></path>
+<circle cx="83" cy="76" r="3.4" fill="#D61F8C" stroke="none"></circle>
+<path stroke-linecap="butt" d="M75.1 160 C66 160 59 165 59 170 C59 175 66 178 76 178"></path>
+</g>
+<g stroke="#FF7A59" transform="matrix(-1 0 0 1 200 0)">
+<path d="M100 48 C94 48 89 49 86 50 L75 26 Q72 21 70 26 L66 52 C62 60 60 66 60 72 C60 84 82 104 100 108"></path>
+<path d="M73 93 C75 120 74 150 76 178 H100"></path>
+<path d="M92 152 V178"></path>
+<path d="M64 91 L48 88 M65 97 L50 101"></path>
+<circle cx="83" cy="76" r="3.4" fill="#FF7A59" stroke="none"></circle>
+</g>
+<path stroke="#FF7A59" stroke-linecap="butt" d="M125.1 154 C131 150 136 139 134 124 C147 130 155 142 153 156 C151 170 140 178 124 178 M131.4 146 Q141 145 150.9 140.4"></path>
+<circle cx="100" cy="96" r="3.8" fill="#D61F8C" stroke="none"></circle>
+</svg>

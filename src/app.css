@@ -1,0 +1,141 @@
+@import 'tailwindcss';
+@import '@fontsource/instrument-serif/400.css';
+@import '@fontsource/instrument-serif/400-italic.css';
+@import '@fontsource-variable/manrope';
+@import './styles/tokens.css';
+
+@custom-variant dark (&:where([data-theme='dark'], [data-theme='dark'] *));
+
+/*
+ * Tailwind-Utilities auf die Marken-Tokens abbilden. "reference" registriert nur die Namen,
+ * die Werte (inkl. Dark Mode) kommen ausschließlich aus tokens.css.
+ */
+@theme reference {
+  --color-*: initial;
+  --color-primary: currentColor;
+  --color-primary-hover: currentColor;
+  --color-on-primary: currentColor;
+  --color-accent: currentColor;
+  --color-bg: currentColor;
+  --color-surface: currentColor;
+  --color-text: currentColor;
+  --color-text-muted: currentColor;
+  --color-border: currentColor;
+  --color-white: #fff;
+  --color-transparent: transparent;
+
+  --font-*: initial;
+  --font-display: currentColor;
+  --font-sans: currentColor;
+
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  --ease-brand: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@utility shadow-card {
+  box-shadow: var(--shadow-card);
+}
+@utility text-display {
+  font-family: var(--font-display);
+  font-size: var(--text-display);
+  line-height: var(--lh-display);
+}
+@utility text-title {
+  font-family: var(--font-display);
+  font-size: var(--text-title);
+  line-height: var(--lh-title);
+}
+@utility text-heading {
+  font-size: var(--text-heading);
+  line-height: var(--lh-heading);
+  font-weight: 600;
+}
+@utility text-small {
+  font-size: var(--text-small);
+  line-height: var(--lh-small);
+  font-weight: 500;
+}
+@utility text-label {
+  font-size: var(--text-label);
+  font-weight: 600;
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+}
+
+@layer base {
+  html {
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: var(--font-sans);
+    font-size: var(--text-body);
+    line-height: var(--lh-body);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-primary);
+    outline-offset: 2px;
+  }
+}
+
+/* Komponenten nach DESIGN.md §5 */
+@utility btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  height: 52px;
+  padding-inline: 32px;
+  border-radius: var(--radius-pill);
+  font-weight: 600;
+  transition:
+    background-color var(--duration-fast) var(--ease),
+    border-color var(--duration-fast) var(--ease);
+  &:disabled {
+    opacity: 0.5;
+  }
+}
+@utility btn-primary {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+  &:hover:not(:disabled) {
+    background: var(--color-primary-hover);
+  }
+}
+@utility btn-secondary {
+  background: var(--color-surface);
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  font-weight: 500;
+}
+@utility btn-sm {
+  height: 40px;
+  padding-inline: 18px;
+  font-size: var(--text-small);
+}
+@utility card {
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  padding: 20px;
+}
+@utility field {
+  width: 100%;
+  min-height: 44px;
+  padding: 10px 12px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-bg);
+  color: var(--color-text);
+  &::placeholder {
+    color: var(--color-text-muted);
+  }
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+  }
+}

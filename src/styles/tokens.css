@@ -1,0 +1,104 @@
+/* Takt – Design Tokens
+   Fonts (Google Fonts, SIL OFL):
+   <link rel="preconnect" href="https://fonts.googleapis.com">
+   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Manrope:wght@300;400;500;600;700&display=swap">
+   Für eine offline-fähige PWA: Fonts selbst hosten (z. B. @fontsource/instrument-serif, @fontsource-variable/manrope).
+*/
+
+:root {
+  /* Marke */
+  --color-primary: #d61f8c; /* Fuchsia: Fokus, Hauptaktion */
+  --color-primary-hover: #b8177a;
+  --color-on-primary: #ffffff;
+  --color-accent: #ff7a59; /* Koralle: Pause, Akzente – nie für Text */
+
+  /* Flächen & Text */
+  --color-bg: #f7f1f5;
+  --color-surface: #ffffff;
+  --color-text: #1e1520;
+  --color-text-muted: #6e5a69;
+  --color-border: #e8dde4;
+
+  /* Phasen */
+  --color-phase-focus: var(--color-primary);
+  --color-phase-break: var(--color-accent);
+  --color-ring-track: var(--color-border);
+
+  /* Schrift */
+  --font-display: 'Instrument Serif', Georgia, serif;
+  --font-sans: 'Manrope Variable', 'Manrope', system-ui, -apple-system, 'Segoe UI', sans-serif;
+
+  --text-display: 56px;
+  --lh-display: 60px;
+  --text-title: 36px;
+  --lh-title: 42px;
+  --text-heading: 20px;
+  --lh-heading: 28px;
+  --text-body: 16px;
+  --lh-body: 24px;
+  --text-small: 13px;
+  --lh-small: 18px;
+  --text-label: 12px;
+  --tracking-label: 0.14em;
+  --text-timer: clamp(64px, 18vw, 96px);
+
+  /* Abstände (4er-Raster) */
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 24px;
+  --space-6: 32px;
+  --space-7: 48px;
+  --space-8: 64px;
+
+  /* Radien */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
+  --radius-pill: 999px;
+
+  /* Schatten */
+  --shadow-card: 0 1px 2px rgba(60, 20, 45, 0.06), 0 12px 32px rgba(60, 20, 45, 0.08);
+
+  /* Bewegung */
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --duration-fast: 150ms;
+  --duration-base: 250ms;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    --color-primary: #ff4db2;
+    --color-primary-hover: #ff73c3;
+    --color-on-primary: #17121c;
+    --color-accent: #ff8f6b;
+    --color-bg: #17121c;
+    --color-surface: #221a29;
+    --color-text: #f5eef3;
+    --color-text-muted: #b79db0;
+    --color-border: #3a2f40;
+    --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme='dark'] {
+  --color-primary: #ff4db2;
+  --color-primary-hover: #ff73c3;
+  --color-on-primary: #17121c;
+  --color-accent: #ff8f6b;
+  --color-bg: #17121c;
+  --color-surface: #221a29;
+  --color-text: #f5eef3;
+  --color-text-muted: #b79db0;
+  --color-border: #3a2f40;
+  --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.4);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --duration-fast: 0ms;
+    --duration-base: 0ms;
+  }
+}

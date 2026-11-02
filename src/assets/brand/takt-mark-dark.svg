@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="50 14 100 100" width="512" height="512" fill="none" stroke-width="6.5" stroke-linecap="round" stroke-linejoin="round"><title>Takt</title>
+<g stroke="#FF4DB2"><path d="M100 48 C94 48 89 49 86 50 L75 26 Q72 21 70 26 L66 52 C62 60 60 66 60 72 C60 84 82 104 100 108"></path><circle cx="83" cy="76" r="4.5" fill="#FF4DB2" stroke="none"></circle></g>
+<g stroke="#FF8F6B" transform="matrix(-1 0 0 1 200 0)"><path d="M100 48 C94 48 89 49 86 50 L75 26 Q72 21 70 26 L66 52 C62 60 60 66 60 72 C60 84 82 104 100 108"></path><circle cx="83" cy="76" r="4.5" fill="#FF8F6B" stroke="none"></circle></g>
+<circle cx="100" cy="91" r="4.5" fill="#FF4DB2" stroke="none"></circle>
+</svg>
