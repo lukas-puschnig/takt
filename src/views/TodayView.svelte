@@ -7,6 +7,7 @@
   import RoutineCard from '../components/routines/RoutineCard.svelte'
   import RoutineEditor from '../components/routines/RoutineEditor.svelte'
   import WeekStrip from '../components/routines/WeekStrip.svelte'
+  import TodoSection from '../components/todos/TodoSection.svelte'
 
   let editorOpen = $state(false)
   let editing = $state<Routine | null>(null)
@@ -61,6 +62,8 @@
 
   <WeekStrip bind:selected={app.selectedDay} />
 
+  <TodoSection {day} />
+
   {#if app.activeRoutines.length === 0}
     <div class="flex flex-col items-start gap-4 card py-8">
       <p class="text-title">Noch keine <em class="text-primary">Routinen</em>.</p>
@@ -75,9 +78,9 @@
     <div class="flex items-center justify-between">
       <p class="text-label text-text-muted">
         {#if due.length}
-          {totals.routines} von {due.length} erledigt
+          Routinen · {totals.routines} von {due.length}
         {:else}
-          Nichts fällig
+          Routinen · nichts fällig
         {/if}
       </p>
       {#if day > app.today}

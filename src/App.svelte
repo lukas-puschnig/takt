@@ -3,7 +3,9 @@
   import { setLucideProps } from '@lucide/svelte'
   import markDark from './assets/brand/takt-mark-dark.svg'
   import markLight from './assets/brand/takt-mark-light.svg'
+  import { formatClock } from './lib/focus/timer'
   import { app } from './lib/state/app.svelte'
+  import { focus } from './lib/state/focus.svelte'
   import FocusView from './views/FocusView.svelte'
   import SettingsView from './views/SettingsView.svelte'
   import TodayView from './views/TodayView.svelte'
@@ -29,6 +31,15 @@
   prefersDark.addEventListener('change', (e) => (systemDark = e.matches))
   const dark = $derived(
     app.settings.theme === 'dark' || (app.settings.theme === 'system' && systemDark),
+  )
+
+  // Tipp auf eine Benachrichtigung: der Service Worker bittet um den passenden Tab.
+  navigator.serviceWorker?.addEventListener('message', (e) => {
+    if (e.data?.type === 'takt:navigate' && typeof e.data.hash === 'string') location.hash = e.data.hash
+  })
+
+  const timerBadge = $derived(
+    focus.run && focus.run.status !== 'ready' ? formatClock(focus.remaining) : null,
   )
 
   $effect(() => {
@@ -74,7 +85,11 @@
           aria-current={tab === t.id ? 'page' : undefined}
         >
           <Icon size={22} />
-          {t.label}
+          {#if t.id === 'fokus' && timerBadge}
+            <span class="tabular-nums">{timerBadge}</span>
+          {:else}
+            {t.label}
+          {/if}
         </a>
       </li>
     {/each}

@@ -7,10 +7,19 @@
     stroke?: number
     /** CSS-Farbe des Fortschritts, Standard: Primär. */
     color?: string
+    /** Gleichmäßig im Sekundentakt laufen (Timer) statt weich einzurasten. */
+    linear?: boolean
     children?: Snippet
   }
 
-  let { ratio, size = 44, stroke = 4, color = 'var(--color-primary)', children }: Props = $props()
+  let {
+    ratio,
+    size = 44,
+    stroke = 4,
+    color = 'var(--color-primary)',
+    linear = false,
+    children,
+  }: Props = $props()
 
   const radius = $derived((size - stroke) / 2)
   const circumference = $derived(2 * Math.PI * radius)
@@ -41,7 +50,7 @@
       stroke-linecap="round"
       stroke-dasharray={circumference}
       stroke-dashoffset={offset}
-      class="ring"
+      class={['ring', linear && 'linear']}
       opacity={ratio > 0 ? 1 : 0}
     />
   </svg>
@@ -55,5 +64,15 @@
     transition:
       stroke-dashoffset var(--duration-base) var(--ease),
       stroke var(--duration-base) var(--ease);
+  }
+  .ring.linear {
+    transition:
+      stroke-dashoffset 1s linear,
+      stroke var(--duration-base) var(--ease);
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .ring.linear {
+      transition: none;
+    }
   }
 </style>

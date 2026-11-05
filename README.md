@@ -31,11 +31,16 @@ src/
   lib/
     date.ts               Tages-Keys, Wochentage, Tagesgrenze
     routines/             Datenmodell, Fälligkeit, Fortschritt, Serien (+ Tests)
+    todos/                Aufgaben, Tagesfilter, Schnelleingabe-Parser (+ Tests)
+    focus/timer.ts        Fokus-Timer als reine Zustandsmaschine (+ Tests)
+    signals.ts            Benachrichtigung, Vibration, Ton, Wake Lock
     storage/              StorageAdapter-Interface, localStorage-Umsetzung
     state/app.svelte.ts   App-Zustand (Runes) und Aktionen
+    state/focus.svelte.ts Laufender Timer, Log und Signale
   components/
     ui/                   Basis-Bausteine (Ring, Checkbox, Sheet, Switch, …)
     routines/             Routinen-Karte, Wochenleiste, Editor
+    todos/                Schnelleingabe, Tages-Chips, Liste, Editor
   views/                  Heute, Fokus, Einstellungen
 ```
 
@@ -45,7 +50,7 @@ Push auf `main` baut und veröffentlicht über GitHub Actions auf GitHub Pages (
 
 ## Datenschutz
 
-- **Keine Daten verlassen das Gerät.** Routinen, Verlauf und Einstellungen liegen nur im `localStorage` des Browsers. Es gibt kein Konto, kein Tracking, keine Analytics und keine Cookies.
+- **Keine Daten verlassen das Gerät.** Routinen, Aufgaben, Fokus-Log, Verlauf und Einstellungen liegen nur im `localStorage` des Browsers. Es gibt kein Konto, kein Tracking, keine Analytics und keine Cookies.
 - **Keine Anfragen an Dritte.** Schriften und Icons sind im Build enthalten, es werden keine externen Ressourcen (z. B. Google Fonts oder CDNs) geladen.
 - **Hosting:** Beim Abruf über GitHub Pages verarbeitet GitHub technisch bedingt Verbindungsdaten wie die IP-Adresse ([GitHub Privacy Statement](https://docs.github.com/de/site-policy/privacy-policies/github-general-privacy-statement)). Nach der Installation läuft die App offline aus dem Cache.
 - **Export/Import** erzeugt bzw. liest nur lokale JSON-Dateien. Ein späterer Sync (Nextcloud) wird optional und die Zugangsdaten bleiben im Browser.

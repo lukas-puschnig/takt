@@ -49,7 +49,41 @@ Wiederkehrende Aufgaben nach dem Vorbild der Habitica-Dailies, aber ohne Spielme
 
 ---
 
-## 2. Fokus-Planer und Timer ⏳
+## 1b. Aufgaben (To-dos) ✅
+
+Einmalige Aufgaben neben den Routinen, nach dem Vorbild der Habitica-To-dos.
+
+- **Schnelleingabe** oben in der Heute-Ansicht. Enter legt an, das Feld bleibt für die nächste Aufgabe offen.
+- **Tag per Chip** (Heute / Morgen / Datum / Irgendwann) oder per **Tageswort im Text**: „Zahnarzt anrufen morgen“, „Bericht fr“, „am Freitag“, „nächste Woche“, „Wochenende“, „12.11.“. Wochentags-Kürzel (mo, di, …) nur am Ende.
+- Vorgabe ist der in der Wochenleiste gewählte Tag: Morgen antippen, tippen, fertig.
+- Offenes von früher rutscht automatisch in „Heute“ und ist als „Seit …“ markiert.
+- „Irgendwann“-Liste ohne Datum, eingeklappt unter den Aufgaben.
+- Wochenleiste: Punkt unter Tagen mit offenen Aufgaben.
+- Antippen öffnet den Editor (Titel, Tag, Notiz, Löschen).
+
+**Ideen für später** ⏳ Checklisten in Aufgaben, Swipe-Gesten (erledigt / auf morgen), Erinnerung zu einer Uhrzeit (braucht Push, siehe §2).
+
+---
+
+## 2. Fokus-Timer ✅ · Planer ⏳
+
+**Umgesetzt**
+
+- Zwei Modi: **Deep Work** (50/10, lange Pause 20 nach 3 Takten) und **Normal** (25/5, 15 nach 4). Längen in den Einstellungen anpassbar.
+- Ring mit Restzeit, Phasenfarben, Rundenpunkte, Endzeit („bis 10:45“), Restzeit in der Navigationsleiste.
+- Vor dem Takt: „Was ist das konkrete Ergebnis?“ – frei oder per Chip aus den offenen Aufgaben von heute. Verknüpfte Aufgabe lässt sich während des Takts abhaken.
+- Nach dem Fokus startet die Pause automatisch, danach wartet der nächste Takt (optional automatisch).
+- Fokus-Log: jeder Takt mit Start, Dauer, Modus, Ziel, abgebrochen ja/nein, Bewertung 1–5 (Abfrage nach dem Takt). Tagesübersicht unten im Fokus-Tab, Export im JSON.
+- Der Timer hängt nur an der Endzeit und holt verpasste Phasen nach (Handy im Standby, Tab im Hintergrund, Neuladen).
+- **Signale** (`src/lib/signals.ts`): Benachrichtigung (bleibt stehen bis weggewischt, `requireInteraction`), optional stehende Status-Benachrichtigung mit Endzeit, Vibration, Ton, Bildschirm wach halten (Wake Lock).
+
+**Grenzen der Web-App bei Signalen**
+
+- iPhone: Benachrichtigungen nur als installierte Home-Bildschirm-App (ab iOS 16.4), **keine Vibration** (Safari kennt die Vibration API nicht).
+- Android: Benachrichtigung + Vibration ja. Eine echte **„ongoing“-Benachrichtigung**, die man nicht wegwischen kann, gibt es im Web nicht.
+- Ist die App eingefroren oder geschlossen, kann sie zur Endzeit nichts auslösen. Abhilfe: Bildschirm wach halten, oder später **Web Push** (braucht einen kleinen Server, der zur Endzeit pusht) bzw. eine **native Hülle mit Capacitor** (lokal geplante Benachrichtigungen, „ongoing“, Vibration – auch iOS).
+
+**Planer (noch offen)**
 
 **Funktionen**
 
@@ -96,7 +130,8 @@ Wiederkehrende Aufgaben nach dem Vorbild der Habitica-Dailies, aber ohne Spielme
 
 1. ✅ Projekt-Setup (Vite, Svelte 5, TypeScript, Tailwind v4, PWA, Tests, Lint), Marken-Tokens und Icons
 2. ✅ Tägliche Routinen
-3. ⏳ Fokus: Planlogik (Regler → Takte) mit Tests, dann Timer
-4. ⏳ Fokus-Log, Abfrage nach dem Block, Tagesübersicht
+3. ✅ Aufgaben mit Schnelleingabe; Fokus-Timer (Deep/Normal) mit Signalen
+4. ✅ Fokus-Log, Abfrage nach dem Block, Tagesübersicht
+4b. ⏳ Fokus-Planer: Zeitfenster + Regler → Takte
 5. ⏳ Auswertung, CSV-Export
 6. ⏳ Nextcloud-Sync

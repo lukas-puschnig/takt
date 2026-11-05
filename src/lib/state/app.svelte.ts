@@ -1,6 +1,9 @@
 import { logicalToday, type DateKey } from '../date'
+import type { FocusSession } from '../focus/timer'
+import { uid } from '../id'
 import { setAll, toggleItem } from '../routines/schedule'
 import type { Routine, RoutineLog } from '../routines/types'
+import type { Todo } from '../todos/types'
 import {
   DEFAULT_SETTINGS,
   normalize,
@@ -14,7 +17,9 @@ import { starterRoutines } from './starter'
 class AppState {
   routines = $state<Routine[]>([])
   logs = $state<AppData['logs']>({})
-  settings = $state<Settings>({ ...DEFAULT_SETTINGS })
+  todos = $state<Todo[]>([])
+  sessions = $state<FocusSession[]>([])
+  settings = $state<Settings>(structuredClone(DEFAULT_SETTINGS))
   /** Logischer heutiger Tag, aktualisiert sich über die Tagesgrenze hinweg. */
   today = $state<DateKey>(logicalToday(new Date(), DEFAULT_SETTINGS.dayStartHour))
   /** Der in der Heute-Ansicht ausgewählte Tag. */
@@ -31,9 +36,7 @@ class AppState {
   async init() {
     const data = await this.#storage.load()
     if (data) {
-      this.routines = data.routines
-      this.logs = data.logs
-      this.settings = data.settings
+      this.#apply(data)
     } else {
       this.routines = starterRoutines(logicalToday(new Date(), DEFAULT_SETTINGS.dayStartHour))
       this.#persist()
@@ -41,6 +44,14 @@ class AppState {
     this.#tick()
     setInterval(() => this.#tick(), 60_000)
     document.addEventListener('visibilitychange', () => this.#tick())
+  }
+
+  #apply(data: AppData) {
+    this.routines = data.routines
+    this.logs = data.logs
+    this.todos = data.todos
+    this.sessions = data.sessions
+    this.settings = data.settings
   }
 
   #tick() {
@@ -51,11 +62,18 @@ class AppState {
     this.today = next
   }
 
+  /** Logischer Tag zu einem Zeitpunkt (Tagesgrenze beachtet). */
+  dayOf(time: number): DateKey {
+    return logicalToday(new Date(time), this.settings.dayStartHour)
+  }
+
   snapshot(): AppData {
     return $state.snapshot({
       version: 1 as const,
       routines: this.routines,
       logs: this.logs,
+      todos: this.todos,
+      sessions: this.sessions,
       settings: this.settings,
     })
   }
@@ -64,7 +82,7 @@ class AppState {
     void this.#storage.save(this.snapshot())
   }
 
-  // --- Abhaken -----------------------------------------------------------
+  // --- Routinen abhaken --------------------------------------------------
 
   logFor(routineId: string, day: DateKey): RoutineLog | undefined {
     return this.logs[day]?.[routineId]
@@ -116,6 +134,56 @@ class AppState {
     this.#persist()
   }
 
+  // --- Aufgaben ----------------------------------------------------------
+
+  addTodo(title: string, day: DateKey | null) {
+    this.todos.push({ id: uid(), title, day: day ?? undefined, createdOn: this.today })
+    this.#persist()
+  }
+
+  saveTodo(todo: Todo) {
+    const index = this.todos.findIndex((t) => t.id === todo.id)
+    if (index === -1) this.todos.push(todo)
+    else this.todos[index] = todo
+    this.#persist()
+  }
+
+  /** Erledigt-Status umschalten; erledigt wird am angezeigten (nicht zukünftigen) Tag. */
+  toggleTodo(id: string, day: DateKey = this.today) {
+    const todo = this.todos.find((t) => t.id === id)
+    if (!todo) return
+    if (todo.doneOn) delete todo.doneOn
+    else todo.doneOn = day > this.today ? this.today : day
+    this.#persist()
+  }
+
+  deleteTodo(id: string) {
+    this.todos = this.todos.filter((t) => t.id !== id)
+    this.#persist()
+  }
+
+  // --- Fokus-Log ---------------------------------------------------------
+
+  addSession(session: Omit<FocusSession, 'id'>): string {
+    const id = uid()
+    this.sessions.push({ id, ...session })
+    this.#persist()
+    return id
+  }
+
+  rateSession(id: string, rating: number | undefined) {
+    const s = this.sessions.find((x) => x.id === id)
+    if (!s) return
+    if (rating) s.rating = rating
+    else delete s.rating
+    this.#persist()
+  }
+
+  deleteSession(id: string) {
+    this.sessions = this.sessions.filter((s) => s.id !== id)
+    this.#persist()
+  }
+
   // --- Einstellungen & Daten --------------------------------------------
 
   updateSettings(patch: Partial<Settings>) {
@@ -127,9 +195,7 @@ class AppState {
   importData(raw: unknown): boolean {
     const data = normalize(raw)
     if (!data) return false
-    this.routines = data.routines
-    this.logs = data.logs
-    this.settings = data.settings
+    this.#apply(data)
     this.#persist()
     return true
   }
@@ -137,7 +203,9 @@ class AppState {
   resetAll() {
     this.routines = []
     this.logs = {}
-    this.settings = { ...DEFAULT_SETTINGS }
+    this.todos = []
+    this.sessions = []
+    this.settings = structuredClone(DEFAULT_SETTINGS)
     this.#persist()
   }
 }

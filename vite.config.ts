@@ -18,7 +18,7 @@ export default defineConfig({
     svelte(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'icons/apple-touch-icon-180.png'],
+      includeAssets: ['favicon.svg', 'icons/apple-touch-icon-180.png', 'sw-notify.js'],
       manifest: {
         name: 'Takt',
         short_name: 'Takt',
@@ -46,6 +46,8 @@ export default defineConfig({
         cacheId: 'takt-v2',
         cleanupOutdatedCaches: true,
         globPatterns: ['**/*.{js,css,html,svg,png,woff2}'],
+        // Klick auf Benachrichtigungen (public/sw-notify.js).
+        importScripts: ['sw-notify.js'],
       },
     }),
   ],

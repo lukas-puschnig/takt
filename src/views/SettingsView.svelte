@@ -1,8 +1,20 @@
 <script lang="ts">
-  import { ArrowDown, ArrowUp, Download, Upload } from '@lucide/svelte'
+  import { ArrowDown, ArrowUp, BellRing, Download, Upload } from '@lucide/svelte'
   import type { Weekday } from '../lib/date'
+  import { MODE_LABEL, type FocusMode, type FocusProfile } from '../lib/focus/timer'
   import { describeSchedule } from '../lib/routines/format'
+  import {
+    canNotify,
+    canVibrate,
+    chime,
+    notify,
+    permission,
+    requestPermission,
+    unlockAudio,
+    vibrate as vibrateNow,
+  } from '../lib/signals'
   import { app } from '../lib/state/app.svelte'
+  import { focus } from '../lib/state/focus.svelte'
   import type { Theme } from '../lib/storage/adapter'
   import Segmented from '../components/ui/Segmented.svelte'
   import Switch from '../components/ui/Switch.svelte'
@@ -17,6 +29,46 @@
   const theme = setting('theme')
   const weekStart = setting('weekStart')
   const collapseDone = setting('collapseDone')
+  const autoStartFocus = setting('autoStartFocus')
+  const vibrate = setting('vibrate')
+  const sound = setting('sound')
+
+  const MODES: FocusMode[] = ['deep', 'normal']
+  const PROFILE_FIELDS: { key: keyof FocusProfile; label: string; max: number }[] = [
+    { key: 'focus', label: 'Fokus', max: 180 },
+    { key: 'short', label: 'Pause', max: 60 },
+    { key: 'long', label: 'Lange', max: 90 },
+    { key: 'every', label: 'Lang nach', max: 12 },
+  ]
+
+  function setProfile(mode: FocusMode, key: keyof FocusProfile, value: number, max: number) {
+    if (!Number.isFinite(value)) return
+    const v = Math.min(max, Math.max(1, Math.round(value)))
+    const profiles = structuredClone($state.snapshot(app.settings.profiles))
+    profiles[mode][key] = v
+    app.updateSettings({ profiles })
+  }
+
+  let perm = $state(permission())
+
+  async function setNotify(on: boolean) {
+    if (!on) return app.updateSettings({ notify: false })
+    perm = await requestPermission()
+    app.updateSettings({ notify: perm === 'granted' })
+  }
+
+  function testSignals() {
+    unlockAudio()
+    if (app.settings.sound) chime()
+    if (app.settings.vibrate) vibrateNow([250, 120, 250, 120, 500])
+    if (app.settings.notify) {
+      void notify('Takt', {
+        body: 'So sieht das Signal am Blockende aus.',
+        tag: 'takt-test',
+        requireInteraction: true,
+      })
+    }
+  }
 
   function exportData() {
     const blob = new Blob([JSON.stringify(app.snapshot(), null, 2)], { type: 'application/json' })
@@ -40,7 +92,8 @@
   }
 
   function reset() {
-    if (confirm('Alle Routinen, den Verlauf und die Einstellungen löschen?')) app.resetAll()
+    if (confirm('Alle Routinen, Aufgaben, Fokus-Takte, den Verlauf und die Einstellungen löschen?'))
+      app.resetAll()
   }
 </script>
 
@@ -62,6 +115,85 @@
       bind:checked={collapseDone.get, collapseDone.set}
       label="Erledigte Routinen einklappen"
     />
+  </div>
+
+  <div class="flex flex-col gap-5 card">
+    <h2 class="text-heading">Fokus</h2>
+    {#each MODES as mode (mode)}
+      {@const p = app.settings.profiles[mode]}
+      <div class="flex flex-col gap-2">
+        <span class="text-label text-text-muted">{MODE_LABEL[mode]}</span>
+        <div class="grid grid-cols-4 gap-2">
+          {#each PROFILE_FIELDS as f (f.key)}
+            <label class="flex flex-col gap-1">
+              <span class="text-small text-text-muted">{f.label}</span>
+              <input
+                class="field px-2 tabular-nums"
+                type="number"
+                inputmode="numeric"
+                min="1"
+                max={f.max}
+                value={p[f.key]}
+                onchange={(e) => setProfile(mode, f.key, e.currentTarget.valueAsNumber, f.max)}
+              />
+            </label>
+          {/each}
+        </div>
+      </div>
+    {/each}
+    <p class="text-small text-text-muted">Minuten; „Lang nach“ = Anzahl Takte bis zur langen Pause.</p>
+    <Switch
+      bind:checked={autoStartFocus.get, autoStartFocus.set}
+      label="Nächsten Takt automatisch starten"
+      hint="Sonst wartet der Timer nach jeder Pause auf dich."
+    />
+  </div>
+
+  <div class="flex flex-col gap-5 card">
+    <h2 class="text-heading">Signale</h2>
+    {#if canNotify}
+      <Switch
+        bind:checked={() => app.settings.notify, setNotify}
+        label="Benachrichtigung am Blockende"
+        hint={perm === 'denied'
+          ? 'Im Browser blockiert – in den Website-Einstellungen erlauben.'
+          : 'Bleibt stehen, bis du sie wegwischst oder weitermachst.'}
+      />
+      {#if app.settings.notify}
+        <Switch
+          bind:checked={() => app.settings.statusNotify,
+          (v) => {
+            app.updateSettings({ statusNotify: v })
+            focus.refresh()
+          }}
+          label="Laufenden Takt anzeigen"
+          hint="Stehende Benachrichtigung mit Endzeit, solange ein Takt läuft."
+        />
+      {/if}
+    {:else}
+      <p class="text-small text-text-muted">
+        Dieser Browser unterstützt keine Benachrichtigungen. Auf dem iPhone geht es nur, wenn Takt
+        zum Home-Bildschirm hinzugefügt wurde.
+      </p>
+    {/if}
+    <Switch
+      bind:checked={vibrate.get, vibrate.set}
+      label="Vibration"
+      hint={canVibrate ? undefined : 'Auf diesem Gerät nicht verfügbar (z. B. iPhone).'}
+    />
+    <Switch bind:checked={sound.get, sound.set} label="Ton" />
+    <Switch
+      bind:checked={() => app.settings.wakeLock,
+      (v) => {
+        app.updateSettings({ wakeLock: v })
+        focus.refresh()
+      }}
+      label="Bildschirm wach halten"
+      hint="Solange der Timer läuft. Hält den Timer auf dem Handy zuverlässig am Laufen."
+    />
+    <button type="button" class="btn self-start btn-sm btn-secondary" onclick={testSignals}>
+      <BellRing size={16} /> Signal testen
+    </button>
   </div>
 
   <div class="flex flex-col gap-5 card">
