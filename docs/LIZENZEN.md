@@ -6,14 +6,15 @@ Der Code von Takt steht unter der [MIT-Lizenz](../LICENSE).
 
 ## In der App ausgelieferte Fremdbestandteile
 
-| Bestandteil                                                                          | Verwendung       | Lizenz                    |
-| ------------------------------------------------------------------------------------ | ---------------- | ------------------------- |
-| [Instrument Serif](https://github.com/Instrument/instrument-serif) (über Fontsource) | Titel, Wortmarke | SIL Open Font License 1.1 |
-| [Manrope](https://github.com/sharanda/manrope) (über Fontsource)                     | UI-Schrift       | SIL Open Font License 1.1 |
-| [Lucide](https://lucide.dev) (`@lucide/svelte`)                                      | Icons            | ISC                       |
-| [Svelte](https://svelte.dev) inkl. Laufzeit-Hilfspakete (clsx, devalue, esm-env)     | Framework        | MIT                       |
-| [Workbox](https://developer.chrome.com/docs/workbox) (über vite-plugin-pwa)          | Service Worker   | MIT                       |
-| [Tailwind CSS](https://tailwindcss.com) (Preflight im CSS-Bundle)                    | Styles           | MIT                       |
+| Bestandteil                                                                          | Verwendung       | Lizenz                        |
+| ------------------------------------------------------------------------------------ | ---------------- | ----------------------------- |
+| [Instrument Serif](https://github.com/Instrument/instrument-serif) (über Fontsource) | Titel, Wortmarke | SIL Open Font License 1.1     |
+| [Manrope](https://github.com/sharanda/manrope) (über Fontsource)                     | UI-Schrift       | SIL Open Font License 1.1     |
+| [Lucide](https://lucide.dev) (`@lucide/svelte`)                                      | Icons            | ISC                           |
+| [Svelte](https://svelte.dev) inkl. Laufzeit-Hilfspakete (clsx, devalue, esm-env)     | Framework        | MIT                           |
+| [Workbox](https://developer.chrome.com/docs/workbox) (über vite-plugin-pwa)          | Service Worker   | MIT                           |
+| [Tailwind CSS](https://tailwindcss.com) (Preflight im CSS-Bundle)                    | Styles           | MIT                           |
+| [Emojibase](https://emojibase.dev) (`emojibase-data`, Namen aus Unicode CLDR)        | Emoji-Auswahl    | MIT; CLDR: Unicode License v3 |
 
 Die Lizenztexte der Schriften und Icons werden mit der App unter `licenses/` ausgeliefert (Quelle: `public/licenses/`), wie es die OFL beim Weitergeben der Schriftdateien verlangt.
 
