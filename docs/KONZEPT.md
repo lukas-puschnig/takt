@@ -132,6 +132,6 @@ Einmalige Aufgaben neben den Routinen, nach dem Vorbild der Habitica-To-dos.
 2. ✅ Tägliche Routinen
 3. ✅ Aufgaben mit Schnelleingabe; Fokus-Timer (Deep/Normal) mit Signalen
 4. ✅ Fokus-Log, Abfrage nach dem Block, Tagesübersicht
-4b. ⏳ Fokus-Planer: Zeitfenster + Regler → Takte
+   4b. ⏳ Fokus-Planer: Zeitfenster + Regler → Takte
 5. ⏳ Auswertung, CSV-Export
 6. ⏳ Nextcloud-Sync

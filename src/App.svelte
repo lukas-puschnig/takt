@@ -35,7 +35,8 @@
 
   // Tipp auf eine Benachrichtigung: der Service Worker bittet um den passenden Tab.
   navigator.serviceWorker?.addEventListener('message', (e) => {
-    if (e.data?.type === 'takt:navigate' && typeof e.data.hash === 'string') location.hash = e.data.hash
+    if (e.data?.type === 'takt:navigate' && typeof e.data.hash === 'string')
+      location.hash = e.data.hash
   })
 
   const timerBadge = $derived(

@@ -51,8 +51,7 @@
   class="flex flex-col gap-3"
   onsubmit={submit}
   onfocusin={() => (focused = true)}
-  onfocusout={() =>
-    setTimeout(() => (focused = container.contains(document.activeElement)), 0)}
+  onfocusout={() => setTimeout(() => (focused = container.contains(document.activeElement)), 0)}
 >
   <div class="flex items-center gap-2">
     <Plus size={20} class="shrink-0 text-text-muted" />
@@ -79,9 +78,7 @@
     <div class="flex flex-col gap-2 pl-7">
       <DayChips bind:value={() => day, pick} today={app.today} />
       {#if !text}
-        <p class="text-small text-text-muted">
-          Tipp: „morgen“, „fr“ oder „12.11.“ dazuschreiben.
-        </p>
+        <p class="text-small text-text-muted">Tipp: „morgen“, „fr“ oder „12.11.“ dazuschreiben.</p>
       {/if}
     </div>
   {/if}

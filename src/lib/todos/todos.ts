@@ -20,15 +20,11 @@ export function todosFor(todos: Todo[], day: DateKey, today: DateKey) {
   const open =
     day < today
       ? []
-      : todos.filter(
-          (t) => !t.doneOn && t.day && (day === today ? t.day <= today : t.day === day),
-        )
+      : todos.filter((t) => !t.doneOn && t.day && (day === today ? t.day <= today : t.day === day))
   // Überfälliges zuerst, ältestes oben.
   open.sort((a, b) => (a.day! < b.day! ? -1 : a.day! > b.day! ? 1 : 0))
   // In der Vorschau bleiben vorzeitig erledigte Aufgaben an ihrem geplanten Tag sichtbar.
-  const done = todos.filter(
-    (t) => t.doneOn === day || (day > today && t.doneOn && t.day === day),
-  )
+  const done = todos.filter((t) => t.doneOn === day || (day > today && t.doneOn && t.day === day))
   return { open, done }
 }
 
@@ -65,7 +61,10 @@ export function nextWeekday(today: DateKey, wd: Weekday): DateKey {
 
 /** Erkennt ein Tageswort, z. B. „morgen“, „fr“, „nächste woche“, „12.11.“. */
 function resolveWord(word: string, today: DateKey, weekStart: Weekday): DateKey | null | undefined {
-  const w = word.toLowerCase().replace(/^am\s+/, '').replace(/\.$/, '')
+  const w = word
+    .toLowerCase()
+    .replace(/^am\s+/, '')
+    .replace(/\.$/, '')
   if (w === 'heute') return today
   if (w === 'morgen') return addDays(today, 1)
   if (w === 'übermorgen' || w === 'uebermorgen') return addDays(today, 2)

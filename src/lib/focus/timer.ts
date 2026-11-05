@@ -74,10 +74,21 @@ export interface FocusSession {
 const MIN = 60_000
 
 export function phaseMs(profile: FocusProfile, phase: Phase): number {
-  return Math.max(1, phase === 'focus' ? profile.focus : phase === 'break' ? profile.short : profile.long) * MIN
+  return (
+    Math.max(
+      1,
+      phase === 'focus' ? profile.focus : phase === 'break' ? profile.short : profile.long,
+    ) * MIN
+  )
 }
 
-function begin(base: TimerRun, phase: Phase, profile: FocusProfile, at: number, run: boolean): TimerRun {
+function begin(
+  base: TimerRun,
+  phase: Phase,
+  profile: FocusProfile,
+  at: number,
+  run: boolean,
+): TimerRun {
   const duration = phaseMs(profile, phase)
   return {
     ...base,
@@ -202,6 +213,10 @@ export function formatClock(ms: number): string {
   const s = total % 60
   return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
 }
+
+/** Uhrzeit "HH:MM" eines Zeitpunkts. */
+export const clockTime = (ms: number) =>
+  new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 
 export function formatMinutes(min: number): string {
   const m = Math.round(min)

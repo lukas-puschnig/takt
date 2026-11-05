@@ -2,6 +2,7 @@
   import { Bell, Pause, Play, SkipForward, Square, Trash2 } from '@lucide/svelte'
   import { plural } from '../lib/routines/format'
   import {
+    clockTime,
     formatClock,
     formatMinutes,
     MODE_LABEL,
@@ -10,7 +11,7 @@
   } from '../lib/focus/timer'
   import { canNotify, permission, requestPermission } from '../lib/signals'
   import { app } from '../lib/state/app.svelte'
-  import { clockTime, focus } from '../lib/state/focus.svelte'
+  import { focus } from '../lib/state/focus.svelte'
   import { todosFor } from '../lib/todos/todos'
   import CheckCircle from '../components/ui/CheckCircle.svelte'
   import ProgressRing from '../components/ui/ProgressRing.svelte'
@@ -128,7 +129,11 @@
       </div>
     </ProgressRing>
 
-    <div class="flex gap-1.5" role="img" aria-label="{filled} von {every} Takten bis zur langen Pause">
+    <div
+      class="flex gap-1.5"
+      role="img"
+      aria-label="{filled} von {every} Takten bis zur langen Pause"
+    >
       {#each Array.from({ length: every }, (_, i) => i) as i (i)}
         <span
           class={[
@@ -187,7 +192,8 @@
   <div class="flex items-center justify-center gap-3">
     {#if choosing}
       <button type="button" class="btn btn-primary" onclick={begin}>
-        <Play size={20} /> {run ? 'Takt starten' : 'Starten'}
+        <Play size={20} />
+        {run ? 'Takt starten' : 'Starten'}
       </button>
     {:else if run?.status === 'running'}
       <button type="button" class="btn btn-primary" onclick={() => focus.pause()}>
@@ -195,7 +201,7 @@
       </button>
       <button
         type="button"
-        class="btn btn-secondary px-4"
+        class="btn px-4 btn-secondary"
         aria-label={isBreak ? 'Pause überspringen' : 'Takt beenden und Pause starten'}
         onclick={() => focus.skip()}
       >
@@ -207,7 +213,7 @@
       </button>
     {/if}
     {#if run}
-      <button type="button" class="btn btn-secondary px-4" aria-label="Beenden" onclick={stop}>
+      <button type="button" class="btn px-4 btn-secondary" aria-label="Beenden" onclick={stop}>
         <Square size={18} />
       </button>
     {/if}

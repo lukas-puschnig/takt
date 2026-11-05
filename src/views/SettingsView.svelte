@@ -141,7 +141,9 @@
         </div>
       </div>
     {/each}
-    <p class="text-small text-text-muted">Minuten; „Lang nach“ = Anzahl Takte bis zur langen Pause.</p>
+    <p class="text-small text-text-muted">
+      Minuten; „Lang nach“ = Anzahl Takte bis zur langen Pause.
+    </p>
     <Switch
       bind:checked={autoStartFocus.get, autoStartFocus.set}
       label="Nächsten Takt automatisch starten"
@@ -161,11 +163,13 @@
       />
       {#if app.settings.notify}
         <Switch
-          bind:checked={() => app.settings.statusNotify,
-          (v) => {
-            app.updateSettings({ statusNotify: v })
-            focus.refresh()
-          }}
+          bind:checked={
+            () => app.settings.statusNotify,
+            (v) => {
+              app.updateSettings({ statusNotify: v })
+              focus.refresh()
+            }
+          }
           label="Laufenden Takt anzeigen"
           hint="Stehende Benachrichtigung mit Endzeit, solange ein Takt läuft."
         />
@@ -183,15 +187,17 @@
     />
     <Switch bind:checked={sound.get, sound.set} label="Ton" />
     <Switch
-      bind:checked={() => app.settings.wakeLock,
-      (v) => {
-        app.updateSettings({ wakeLock: v })
-        focus.refresh()
-      }}
+      bind:checked={
+        () => app.settings.wakeLock,
+        (v) => {
+          app.updateSettings({ wakeLock: v })
+          focus.refresh()
+        }
+      }
       label="Bildschirm wach halten"
       hint="Solange der Timer läuft. Hält den Timer auf dem Handy zuverlässig am Laufen."
     />
-    <button type="button" class="btn self-start btn-sm btn-secondary" onclick={testSignals}>
+    <button type="button" class="btn btn-sm self-start btn-secondary" onclick={testSignals}>
       <BellRing size={16} /> Signal testen
     </button>
   </div>

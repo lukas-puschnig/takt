@@ -1,5 +1,6 @@
 import {
   catchUp,
+  clockTime,
   pause,
   PHASE_LABEL,
   phaseMs,
@@ -28,9 +29,6 @@ const KEY = 'takt:timer'
 const PATTERN = [250, 120, 250, 120, 500]
 /** Signale nur, wenn das Ende frisch ist – nicht beim Öffnen der App Stunden später. */
 const FRESH_MS = 3 * 60_000
-
-export const clockTime = (ms: number) =>
-  new Date(ms).toLocaleTimeString('de-DE', { hour: '2-digit', minute: '2-digit' })
 
 interface Stored {
   run: TimerRun | null
@@ -114,7 +112,8 @@ class FocusTimer {
   #describe(run: TimerRun): string {
     if (run.status === 'ready') return 'Der nächste Takt wartet auf dich.'
     if (run.status === 'paused') return `${PHASE_LABEL[run.phase]} pausiert.`
-    const what = run.phase === 'focus' ? (run.goal ? `Fokus: ${run.goal}` : 'Fokus') : PHASE_LABEL[run.phase]
+    const what =
+      run.phase === 'focus' ? (run.goal ? `Fokus: ${run.goal}` : 'Fokus') : PHASE_LABEL[run.phase]
     return `${what} bis ${clockTime(run.endsAt)}`
   }
 
