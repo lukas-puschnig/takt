@@ -191,6 +191,26 @@ export function catchUp(
   return { run, events }
 }
 
+/**
+ * Die nächsten Phasenenden im Voraus, damit das Betriebssystem sie auch bei geschlossener
+ * App pünktlich melden kann. Endet, sobald der Timer auf einen Start wartet.
+ */
+export function upcoming(
+  run: TimerRun,
+  profile: FocusProfile,
+  autoFocus: boolean,
+  limit = 4,
+): { at: number; ended: Phase; next: TimerRun }[] {
+  const out: { at: number; ended: Phase; next: TimerRun }[] = []
+  let r = run
+  while (out.length < limit && r.status === 'running') {
+    const n = next(r, profile, r.endsAt, autoFocus)
+    out.push({ at: r.endsAt, ended: r.phase, next: n })
+    r = n
+  }
+  return out
+}
+
 /** Aktuelle Phase vorzeitig beenden und zur nächsten springen. */
 export function skip(
   run: TimerRun,

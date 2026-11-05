@@ -1,4 +1,5 @@
 import { logicalToday, type DateKey } from '../date'
+import { remindKey, remindKeyAt } from '../todos/todos'
 import type { FocusSession } from '../focus/timer'
 import { uid } from '../id'
 import { setAll, toggleItem } from '../routines/schedule'
@@ -60,6 +61,7 @@ class AppState {
     // Wer gerade "heute" ansieht, springt mit in den neuen Tag.
     if (this.selectedDay === this.today) this.selectedDay = next
     this.today = next
+    this.#notify()
   }
 
   /** Logischer Tag zu einem Zeitpunkt (Tagesgrenze beachtet). */
@@ -78,8 +80,20 @@ class AppState {
     })
   }
 
+  #listeners = new Set<() => void>()
+
+  /** Wird nach jeder gespeicherten Änderung und bei Tageswechsel aufgerufen. */
+  onChange(fn: () => void) {
+    this.#listeners.add(fn)
+  }
+
+  #notify() {
+    for (const fn of this.#listeners) fn()
+  }
+
   #persist() {
     void this.#storage.save(this.snapshot())
+    this.#notify()
   }
 
   // --- Routinen abhaken --------------------------------------------------
@@ -136,8 +150,23 @@ class AppState {
 
   // --- Aufgaben ----------------------------------------------------------
 
-  addTodo(title: string, day: DateKey | null) {
-    this.todos.push({ id: uid(), title, day: day ?? undefined, createdOn: this.today })
+  /** Neue Aufgabe; mit `time` ("HH:MM") gibt es eine Erinnerung am Tag (bzw. heute). */
+  addTodo(title: string, day: DateKey | null, time?: string) {
+    this.todos.push({
+      id: uid(),
+      title,
+      createdOn: this.today,
+      ...(day ? { day } : {}),
+      ...(time ? { remindAt: remindKey(day ?? this.today, time) } : {}),
+    })
+    this.#persist()
+  }
+
+  /** Erinnerung um `minutes` ab jetzt verschieben. */
+  snoozeTodo(id: string, minutes: number) {
+    const todo = this.todos.find((t) => t.id === id)
+    if (!todo || todo.doneOn) return
+    todo.remindAt = remindKeyAt(Date.now() + minutes * 60_000)
     this.#persist()
   }
 

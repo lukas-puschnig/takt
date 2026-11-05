@@ -1,0 +1,79 @@
+name: Android
+
+# Baut die Android-Hülle (Capacitor) und hängt die APK an ein GitHub-Release.
+# Die App lädt die Web-App von GitHub Pages; eine neue APK ist nur bei Änderungen an der
+# Hülle oder an nativen Plugins nötig.
+on:
+  push:
+    branches: [main]
+    paths:
+      - android/**
+      - native/**
+      - capacitor.config.json
+      - package-lock.json
+      - .github/workflows/android.yml
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: android
+  cancel-in-progress: true
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+          cache: gradle
+      - run: npm ci
+      - run: npx cap sync android
+
+      - name: Signierschlüssel
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/takt.p12"
+            echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/takt.p12" >> "$GITHUB_ENV"
+          else
+            echo "::warning::Secret ANDROID_KEYSTORE_BASE64 fehlt – APK wird mit Debug-Schlüssel signiert und lässt sich später nicht als Update installieren."
+          fi
+
+      - name: APK bauen
+        working-directory: android
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          VERSION_CODE: ${{ github.run_number }}
+          VERSION_NAME: 1.${{ github.run_number }}
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleRelease --no-daemon --stacktrace
+          cp app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/takt.apk"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: takt-apk
+          path: takt.apk
+
+      - name: Release
+        if: github.ref == 'refs/heads/main'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: android-${{ github.run_number }}
+        run: |
+          # Ältere APK-Releases aufräumen, nur das neueste bleibt.
+          gh release list --limit 100 --json tagName -q '.[].tagName' | grep '^android-' \
+            | xargs -r -I{} gh release delete {} --yes --cleanup-tag
+          gh release create "$TAG" takt.apk --latest \
+            --title "Takt für Android (Build ${{ github.run_number }})" \
+            --notes "APK herunterladen und installieren. Updates der Web-App kommen automatisch, diese APK nur bei Änderungen an der Android-Hülle neu installieren. Commit: ${{ github.sha }}"

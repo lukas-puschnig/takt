@@ -10,6 +10,7 @@ import {
   start,
   startReady,
   stop,
+  upcoming,
   type FocusMode,
   type PhaseEnd,
   type TimerRun,
@@ -23,6 +24,7 @@ import {
   unlockAudio,
   vibrate,
 } from '../signals'
+import { isNative, syncTimer } from '../native/notifications'
 import { app } from './app.svelte'
 
 const KEY = 'takt:timer'
@@ -118,6 +120,8 @@ class FocusTimer {
   }
 
   #alert(e: PhaseEnd, run: TimerRun) {
+    // In der Android-App meldet das System das Ende selbst (vorab geplant, siehe #sync).
+    if (isNative) return
     const s = app.settings
     const focusEnded = e.phase === 'focus'
     if (s.vibrate) vibrate(PATTERN)
@@ -140,6 +144,7 @@ class FocusTimer {
     this.#save()
     const running = this.run?.status === 'running'
     void keepAwake(running && app.settings.wakeLock)
+    if (isNative) return this.#syncNative(updateStatus)
     if (!this.run) return clearNotifications(TIMER_TAG)
     if (updateStatus && app.settings.statusNotify) {
       await notify('Takt', {
@@ -153,6 +158,24 @@ class FocusTimer {
       // Eine noch offene Ende-Benachrichtigung ist erledigt, sobald man weitermacht.
       await clearNotifications(TIMER_TAG)
     }
+  }
+
+  /** Android: alle kommenden Phasenenden beim System vormerken, auch bei gesperrtem Handy. */
+  async #syncNative(clearDelivered: boolean) {
+    const s = app.settings
+    const run = this.run
+    const alerts =
+      run && s.notify
+        ? upcoming(run, s.profiles[run.mode], s.autoStartFocus).map((u) => ({
+            at: u.at,
+            title: u.ended === 'focus' ? 'Zeit für eine Pause.' : 'Pause vorbei.',
+            body: this.#describe(u.next),
+          }))
+        : []
+    const status = run && s.statusNotify ? this.#describe(run) : null
+    await syncTimer(alerts, status, clearDelivered).catch((e) =>
+      console.error('Timer-Benachrichtigungen fehlgeschlagen', e),
+    )
   }
 
   // --- Aktionen ------------------------------------------------------------

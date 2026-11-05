@@ -44,6 +44,15 @@ src/
   views/                  Heute, Fokus, Einstellungen
 ```
 
+## Android-App
+
+Eine [Capacitor](https://capacitorjs.com)-Hülle (`android/`, `capacitor.config.json`) lädt die Web-App von GitHub Pages und ergänzt echte Systembenachrichtigungen (`src/lib/native/`): Erinnerungen zu Uhrzeiten, tägliche Erinnerung an Offenes, Timer-Signale bei gesperrtem Handy, Aktionen „Erledigt“ / „In 1 Stunde“.
+
+- **APK:** `.github/workflows/android.yml` baut bei Änderungen an der Hülle und hängt `takt.apk` an das neueste Release: [Download](https://github.com/lukas-puschnig/takt/releases/latest/download/takt.apk).
+- **Signierung:** Secrets `ANDROID_KEYSTORE_BASE64` (PKCS12, Alias `takt`) und `ANDROID_KEYSTORE_PASSWORD`. Ohne sie wird mit Debug-Schlüssel signiert, dann sind keine Updates über die installierte App möglich.
+- Web-Änderungen brauchen keine neue APK. Neue native Plugins schon.
+- Icons/Splash: `npm run icons`.
+
 ## Deployment
 
 Push auf `main` baut und veröffentlicht über GitHub Actions auf GitHub Pages (`BASE_PATH` wird aus dem Repo-Namen gesetzt). In den Repo-Einstellungen unter _Pages_ als Quelle „GitHub Actions“ wählen.

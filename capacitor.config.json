@@ -1,0 +1,18 @@
+{
+  "appId": "io.github.lukaspuschnig.takt",
+  "appName": "Takt",
+  "webDir": "native/www",
+  "server": {
+    "url": "https://lukas-puschnig.github.io/takt/",
+    "errorPath": "offline.html"
+  },
+  "android": {
+    "backgroundColor": "#F7F1F5"
+  },
+  "plugins": {
+    "LocalNotifications": {
+      "smallIcon": "ic_stat_takt",
+      "iconColor": "#D61F8C"
+    }
+  }
+}

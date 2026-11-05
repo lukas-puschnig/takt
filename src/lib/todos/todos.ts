@@ -103,24 +103,69 @@ const AT_END = new RegExp(`\\s+(${word(WORDS)})$`, 'i')
 // Am Anfang keine Kürzel wie „so“ oder „do“, sonst landet „So viel zu tun“ am Sonntag.
 const AT_START = new RegExp(`^(${word(WORDS.filter((w) => w.length > 2))})\\s+`, 'i')
 
+// „um 9“, „um 9:30“, „9 Uhr“, „9:30 Uhr“, „14:30“
+const TIME_AT_END =
+  /\s+(?:um\s+(\d{1,2})(?:[:.](\d{2}))?(?:\s*uhr)?|(\d{1,2})(?:[:.](\d{2}))?\s*uhr|(\d{1,2}):(\d{2}))$/i
+
 export interface QuickAdd {
   title: string
   /** undefined = kein Tageswort gefunden, null = „irgendwann“. */
   day: DateKey | null | undefined
+  /** Uhrzeit "HH:MM" für eine Erinnerung. */
+  time?: string
 }
 
-/** Zerlegt eine Schnelleingabe wie „Zahnarzt anrufen morgen“ in Titel und Tag. */
-export function parseQuickAdd(input: string, today: DateKey, weekStart: Weekday = 1): QuickAdd {
-  const text = input.trim().replace(/\s+/g, ' ')
+function takeTime(text: string): { rest: string; time?: string } {
+  const m = TIME_AT_END.exec(text)
+  if (!m) return { rest: text }
+  const h = Number(m[1] ?? m[3] ?? m[5])
+  const min = Number(m[2] ?? m[4] ?? m[6] ?? 0)
+  if (h > 23 || min > 59) return { rest: text }
+  const rest = text.slice(0, m.index).trim()
+  if (!rest) return { rest: text }
+  return { rest, time: `${String(h).padStart(2, '0')}:${String(min).padStart(2, '0')}` }
+}
+
+function takeDay(text: string, today: DateKey, weekStart: Weekday) {
   for (const re of [AT_END, AT_START]) {
     const m = re.exec(text)
     if (!m) continue
-    const word = m[1].replace(/^(bis|ab)\s+/i, '')
-    const day = resolveWord(word, today, weekStart)
-    const title = text.replace(re, '').trim()
-    if (day !== undefined && title) return { title, day }
+    const day = resolveWord(m[1].replace(/^(bis|ab)\s+/i, ''), today, weekStart)
+    const rest = text.replace(re, '').trim()
+    if (day !== undefined && rest) return { rest, day }
   }
-  return { title: text, day: undefined }
+  return { rest: text, day: undefined }
+}
+
+/**
+ * Zerlegt eine Schnelleingabe wie „Zahnarzt anrufen morgen um 9“ in Titel, Tag und Uhrzeit.
+ * Uhrzeit und Tag dürfen in beliebiger Reihenfolge am Ende stehen, der Tag auch am Anfang.
+ */
+export function parseQuickAdd(input: string, today: DateKey, weekStart: Weekday = 1): QuickAdd {
+  const first = takeTime(input.trim().replace(/\s+/g, ' '))
+  const { rest, day } = takeDay(first.rest, today, weekStart)
+  // Uhrzeit vor dem Tag: „Call um 14:30 freitag“
+  const { rest: title, time } = first.time ? { rest, time: first.time } : takeTime(rest)
+  return time ? { title, day, time } : { title, day }
+}
+
+/** Erinnerung als lokales "YYYY-MM-DDTHH:MM". */
+export const remindKey = (day: DateKey, time: string) => `${day}T${time}`
+
+/** Erinnerungs-Schlüssel für einen Zeitpunkt (ms). */
+export function remindKeyAt(ms: number): string {
+  const d = new Date(ms)
+  const pad = (n: number) => String(n).padStart(2, '0')
+  return remindKey(toKey(d), `${pad(d.getHours())}:${pad(d.getMinutes())}`)
+}
+
+/** Zeitpunkt (ms) einer Erinnerung in lokaler Zeit. */
+export function remindTime(remindAt: string): number {
+  const [day, time] = remindAt.split('T')
+  const [h, m] = time.split(':').map(Number)
+  const d = fromKey(day)
+  d.setHours(h, m, 0, 0)
+  return d.getTime()
 }
 
 /** Kurze Beschreibung eines Tages relativ zu heute. */

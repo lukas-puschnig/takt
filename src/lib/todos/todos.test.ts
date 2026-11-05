@@ -32,6 +32,30 @@ describe('parseQuickAdd', () => {
     expect(parseQuickAdd('Abgabe 31.2.', WED).day).toBeUndefined()
   })
 
+  it('erkennt Uhrzeiten vor oder nach dem Tag', () => {
+    expect(parseQuickAdd('Zahnarzt anrufen morgen um 9', WED)).toEqual({
+      title: 'Zahnarzt anrufen',
+      day: '2026-11-05',
+      time: '09:00',
+    })
+    expect(parseQuickAdd('Call um 14:30 freitag', WED)).toEqual({
+      title: 'Call',
+      day: '2026-11-06',
+      time: '14:30',
+    })
+    expect(parseQuickAdd('Wäsche 18 Uhr', WED)).toEqual({
+      title: 'Wäsche',
+      day: undefined,
+      time: '18:00',
+    })
+    expect(parseQuickAdd('Treffen 9:05', WED).time).toBe('09:05')
+    expect(parseQuickAdd('Raum 25 Uhr', WED).time).toBeUndefined()
+    expect(parseQuickAdd('Version 2.10 testen', WED)).toEqual({
+      title: 'Version 2.10 testen',
+      day: undefined,
+    })
+  })
+
   it('lässt normale Titel in Ruhe', () => {
     expect(parseQuickAdd('Morgenroutine anpassen', WED)).toEqual({
       title: 'Morgenroutine anpassen',

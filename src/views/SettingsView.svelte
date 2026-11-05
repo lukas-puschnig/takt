@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { ArrowDown, ArrowUp, BellRing, Download, Upload } from '@lucide/svelte'
+  import { ArrowDown, ArrowUp, BellRing, Download, Smartphone, Upload } from '@lucide/svelte'
+  import NativeSettings from '../components/settings/NativeSettings.svelte'
+  import { isNative } from '../lib/native/notifications'
   import type { Weekday } from '../lib/date'
   import { MODE_LABEL, type FocusMode, type FocusProfile } from '../lib/focus/timer'
   import { describeSchedule } from '../lib/routines/format'
@@ -70,8 +72,15 @@
     }
   }
 
-  function exportData() {
-    const blob = new Blob([JSON.stringify(app.snapshot(), null, 2)], { type: 'application/json' })
+  async function exportData() {
+    const json = JSON.stringify(app.snapshot(), null, 2)
+    // Die Android-WebView kann keine Blob-Downloads; dort über die Zwischenablage.
+    if (isNative) {
+      await navigator.clipboard.writeText(json)
+      alert('Daten in die Zwischenablage kopiert.')
+      return
+    }
+    const blob = new Blob([json], { type: 'application/json' })
     const a = document.createElement('a')
     a.href = URL.createObjectURL(blob)
     a.download = `takt-${app.today}.json`
@@ -151,56 +160,76 @@
     />
   </div>
 
-  <div class="flex flex-col gap-5 card">
-    <h2 class="text-heading">Signale</h2>
-    {#if canNotify}
-      <Switch
-        bind:checked={() => app.settings.notify, setNotify}
-        label="Benachrichtigung am Blockende"
-        hint={perm === 'denied'
-          ? 'Im Browser blockiert – in den Website-Einstellungen erlauben.'
-          : 'Bleibt stehen, bis du sie wegwischst oder weitermachst.'}
-      />
-      {#if app.settings.notify}
-        <Switch
-          bind:checked={
-            () => app.settings.statusNotify,
-            (v) => {
-              app.updateSettings({ statusNotify: v })
-              focus.refresh()
-            }
-          }
-          label="Laufenden Takt anzeigen"
-          hint="Stehende Benachrichtigung mit Endzeit, solange ein Takt läuft."
-        />
-      {/if}
-    {:else}
+  {#if isNative}
+    <NativeSettings />
+  {:else}
+    <div class="flex flex-col gap-3 card">
+      <h2 class="flex items-center gap-2 text-heading">
+        <Smartphone size={20} class="text-primary" /> Android-App
+      </h2>
       <p class="text-small text-text-muted">
-        Dieser Browser unterstützt keine Benachrichtigungen. Auf dem iPhone geht es nur, wenn Takt
-        zum Home-Bildschirm hinzugefügt wurde.
+        Erinnerungen zu Uhrzeiten und Timer-Signale bei gesperrtem Handy gibt es nur in der
+        Android-App. Daten vorher hier exportieren und in der App importieren.
       </p>
-    {/if}
-    <Switch
-      bind:checked={vibrate.get, vibrate.set}
-      label="Vibration"
-      hint={canVibrate ? undefined : 'Auf diesem Gerät nicht verfügbar (z. B. iPhone).'}
-    />
-    <Switch bind:checked={sound.get, sound.set} label="Ton" />
-    <Switch
-      bind:checked={
-        () => app.settings.wakeLock,
-        (v) => {
-          app.updateSettings({ wakeLock: v })
-          focus.refresh()
+      <a
+        class="btn btn-sm self-start btn-secondary"
+        href="https://github.com/lukas-puschnig/takt/releases/latest/download/takt.apk"
+      >
+        <Download size={16} /> APK herunterladen
+      </a>
+    </div>
+
+    <div class="flex flex-col gap-5 card">
+      <h2 class="text-heading">Signale</h2>
+      {#if canNotify}
+        <Switch
+          bind:checked={() => app.settings.notify, setNotify}
+          label="Benachrichtigung am Blockende"
+          hint={perm === 'denied'
+            ? 'Im Browser blockiert – in den Website-Einstellungen erlauben.'
+            : 'Bleibt stehen, bis du sie wegwischst oder weitermachst.'}
+        />
+        {#if app.settings.notify}
+          <Switch
+            bind:checked={
+              () => app.settings.statusNotify,
+              (v) => {
+                app.updateSettings({ statusNotify: v })
+                focus.refresh()
+              }
+            }
+            label="Laufenden Takt anzeigen"
+            hint="Stehende Benachrichtigung mit Endzeit, solange ein Takt läuft."
+          />
+        {/if}
+      {:else}
+        <p class="text-small text-text-muted">
+          Dieser Browser unterstützt keine Benachrichtigungen. Auf dem iPhone geht es nur, wenn Takt
+          zum Home-Bildschirm hinzugefügt wurde.
+        </p>
+      {/if}
+      <Switch
+        bind:checked={vibrate.get, vibrate.set}
+        label="Vibration"
+        hint={canVibrate ? undefined : 'Auf diesem Gerät nicht verfügbar (z. B. iPhone).'}
+      />
+      <Switch bind:checked={sound.get, sound.set} label="Ton" />
+      <Switch
+        bind:checked={
+          () => app.settings.wakeLock,
+          (v) => {
+            app.updateSettings({ wakeLock: v })
+            focus.refresh()
+          }
         }
-      }
-      label="Bildschirm wach halten"
-      hint="Solange der Timer läuft. Hält den Timer auf dem Handy zuverlässig am Laufen."
-    />
-    <button type="button" class="btn btn-sm self-start btn-secondary" onclick={testSignals}>
-      <BellRing size={16} /> Signal testen
-    </button>
-  </div>
+        label="Bildschirm wach halten"
+        hint="Solange der Timer läuft. Hält den Timer auf dem Handy zuverlässig am Laufen."
+      />
+      <button type="button" class="btn btn-sm self-start btn-secondary" onclick={testSignals}>
+        <BellRing size={16} /> Signal testen
+      </button>
+    </div>
+  {/if}
 
   <div class="flex flex-col gap-5 card">
     <h2 class="text-heading">Tag und Woche</h2>

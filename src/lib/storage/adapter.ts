@@ -31,6 +31,13 @@ export interface Settings {
   sound: boolean
   /** Bildschirm wach halten, solange der Timer läuft. */
   wakeLock: boolean
+
+  /** Tägliche Erinnerung an Offenes, "HH:MM" oder leer = aus (Android-App). */
+  dailyReminder: string
+  /** Routinen in der täglichen Erinnerung mitzählen. */
+  summaryRoutines: boolean
+  /** Aufgaben-Erinnerungen bleiben stehen, bis die Aufgabe erledigt ist. */
+  stickyReminders: boolean
 }
 
 export interface AppData {
@@ -63,6 +70,9 @@ export const DEFAULT_SETTINGS: Settings = {
   vibrate: true,
   sound: true,
   wakeLock: true,
+  dailyReminder: '',
+  summaryRoutines: true,
+  stickyReminders: true,
 }
 
 /** Ergänzt fehlende Felder und hebt ältere Formate auf die aktuelle Version. */

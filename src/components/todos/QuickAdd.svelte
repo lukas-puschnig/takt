@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { ArrowUp, Plus } from '@lucide/svelte'
+  import { ArrowUp, Bell, Plus } from '@lucide/svelte'
   import type { DateKey } from '../../lib/date'
   import { app } from '../../lib/state/app.svelte'
   import { parseQuickAdd } from '../../lib/todos/todos'
@@ -40,7 +40,7 @@
   function submit(e: SubmitEvent) {
     e.preventDefault()
     if (!parsed.title) return
-    app.addTodo(parsed.title, day)
+    app.addTodo(parsed.title, day, parsed.time)
     text = ''
     input.focus()
   }
@@ -77,8 +77,14 @@
   {#if expanded}
     <div class="flex flex-col gap-2 pl-7">
       <DayChips bind:value={() => day, pick} today={app.today} />
-      {#if !text}
-        <p class="text-small text-text-muted">Tipp: „morgen“, „fr“ oder „12.11.“ dazuschreiben.</p>
+      {#if parsed.time}
+        <p class="flex items-center gap-1.5 text-small text-primary">
+          <Bell size={14} /> Erinnerung um {parsed.time}
+        </p>
+      {:else if !text}
+        <p class="text-small text-text-muted">
+          Tipp: „morgen“, „fr“, „12.11.“ oder „um 9“ dazuschreiben.
+        </p>
       {/if}
     </div>
   {/if}

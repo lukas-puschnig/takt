@@ -5,7 +5,7 @@ import ts from 'typescript-eslint'
 import svelteConfig from './svelte.config.js'
 
 export default ts.config(
-  { ignores: ['dist', 'dev-dist'] },
+  { ignores: ['dist', 'dev-dist', 'android'] },
   js.configs.recommended,
   ...ts.configs.recommended,
   ...svelte.configs.recommended,

@@ -9,5 +9,7 @@ export interface Todo {
   day?: DateKey
   /** Tag, an dem die Aufgabe erledigt wurde. */
   doneOn?: DateKey
+  /** Erinnerung als lokales "YYYY-MM-DDTHH:MM" (nur in der Android-App). */
+  remindAt?: string
   createdOn: DateKey
 }

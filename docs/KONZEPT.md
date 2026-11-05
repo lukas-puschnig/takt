@@ -115,6 +115,18 @@ Einmalige Aufgaben neben den Routinen, nach dem Vorbild der Habitica-To-dos.
 
 ---
 
+## 2b. Android-App und Erinnerungen ✅
+
+Android hat Vorrang (iOS wird nicht verfolgt). Capacitor-Hülle, die die Web-App von GitHub Pages lädt; Benachrichtigungen plant das System (AlarmManager), daher auch bei geschlossener App pünktlich.
+
+- **Aufgaben-Erinnerung** zu einer Uhrzeit: im Editor oder per Schnelleingabe („Zahnarzt morgen um 9“). Buttons „Erledigt“ und „In 1 Stunde“. Optional nicht wegwischbar, bis erledigt.
+- **Tägliche Erinnerung an Offenes** (Standard 18:00): nur wenn Aufgaben (und optional Routinen) offen sind; eine Woche im Voraus geplant, bei jeder Änderung neu.
+- **Timer:** Phasenenden werden beim Start vorab geplant, plus optionale stehende Statusanzeige.
+- Kanäle „Erinnerungen“, „Fokus-Timer“, „Laufender Takt“ – Ton/Vibration in den Android-Einstellungen.
+- Daten der App liegen getrennt vom Browser: Umzug über Export/Import (in der App per Zwischenablage).
+
+---
+
 ## 3. Daten, Sync, Hosting
 
 - **Lokal zuerst:** Alles im Browser (aktuell `localStorage`), Export/Import als JSON, Löschen mit einem Klick. ✅

@@ -10,6 +10,7 @@ import {
   skip,
   start,
   stop,
+  upcoming,
 } from './timer'
 
 const P = DEFAULT_PROFILES.normal // 25 / 5 / 15, alle 4
@@ -52,6 +53,16 @@ describe('timer', () => {
     const skipped = skip(run, DEFAULT_PROFILES.deep, T0 + 12 * MIN)
     expect(skipped.event?.elapsed).toBe(12 * MIN)
     expect(skipped.run).toMatchObject({ phase: 'break', status: 'running' })
+  })
+
+  it('plant die nächsten Phasenenden im Voraus', () => {
+    const run = start('normal', P, T0)
+    expect(upcoming(run, P, false).map((u) => [u.ended, u.at])).toEqual([
+      ['focus', T0 + 25 * MIN],
+      ['break', T0 + 30 * MIN],
+    ])
+    expect(upcoming(run, P, true, 3)).toHaveLength(3)
+    expect(upcoming(pause(run, T0 + MIN), P, false)).toEqual([])
   })
 
   it('formatiert Zeiten', () => {
