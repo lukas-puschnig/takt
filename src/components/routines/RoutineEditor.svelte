@@ -1,10 +1,15 @@
 <script lang="ts">
-  import { ArrowDown, ArrowUp, CalendarDays, Plus, Trash2 } from '@lucide/svelte'
+  import { Bell, GripVertical, Plus, SlidersHorizontal, Trash2 } from '@lucide/svelte'
+  import { slide } from 'svelte/transition'
+  import { moveItem, sortable } from '../../lib/actions/sortable'
   import type { Weekday } from '../../lib/date'
   import { uid } from '../../lib/id'
+  import { isNative } from '../../lib/native/notifications'
+  import { ROUTINE_COLORS, routineColor } from '../../lib/routines/colors'
   import { PRESETS, describeDays } from '../../lib/routines/format'
   import type { Routine, Subtask } from '../../lib/routines/types'
   import { app } from '../../lib/state/app.svelte'
+  import EmojiPicker from '../ui/EmojiPicker.svelte'
   import Segmented from '../ui/Segmented.svelte'
   import Sheet from '../ui/Sheet.svelte'
   import Switch from '../ui/Switch.svelte'
@@ -18,10 +23,17 @@
 
   let { open = $bindable(), routine }: Props = $props()
 
+  /** Erinnerungsintervalle in Minuten; 0 = einmal. */
+  const INTERVALS = [0, 5, 10, 15, 30, 60]
+  const intervalLabel = (m: number) => (m ? `alle ${m} min` : 'einmal')
+
   // Formularzustand, wird beim Öffnen aus der Routine befüllt.
   let title = $state('')
   let time = $state('')
   let notes = $state('')
+  let color = $state<string | undefined>(undefined)
+  /** -1 = keine Erinnerung, sonst Intervall (0 = einmal). */
+  let remind = $state(-1)
   let paused = $state(false)
   let mode = $state<'weekly' | 'interval'>('weekly')
   let days = $state<Weekday[]>([])
@@ -29,7 +41,7 @@
   let start = $state('')
   let subtasks = $state<Subtask[]>([])
   let newSubtask = $state('')
-  let dayEditing = $state<string | null>(null)
+  let detailsOpen = $state<string | null>(null)
 
   $effect(() => {
     if (!open) return
@@ -37,6 +49,8 @@
     title = r?.title ?? ''
     time = r?.time ?? ''
     notes = r?.notes ?? ''
+    color = r?.color
+    remind = r?.reminder ? r.reminder.every : -1
     paused = !!r?.archived
     mode = r?.schedule.type ?? 'weekly'
     days = r?.schedule.type === 'weekly' ? [...r.schedule.days] : [1, 2, 3, 4, 5, 6, 7]
@@ -44,7 +58,7 @@
     start = r?.schedule.type === 'interval' ? r.schedule.start : app.today
     subtasks = r?.subtasks.map((s) => ({ ...s, days: s.days ? [...s.days] : undefined })) ?? []
     newSubtask = ''
-    dayEditing = null
+    detailsOpen = null
   })
 
   const valid = $derived(
@@ -58,10 +72,25 @@
     newSubtask = ''
   }
 
-  function move(index: number, delta: -1 | 1) {
-    const to = index + delta
-    if (to < 0 || to >= subtasks.length) return
-    ;[subtasks[index], subtasks[to]] = [subtasks[to], subtasks[index]]
+  /** Kurzbeschreibung der Zusatzoptionen eines Schritts. */
+  function summary(s: Subtask): string[] {
+    const out: string[] = []
+    if (s.days?.length) out.push(describeDays(s.days, app.settings.weekStart))
+    if (s.optional) out.push('optional')
+    if (s.time) out.push(s.nag ? `${s.time} · wichtig, ${intervalLabel(s.nag)}` : s.time)
+    return out
+  }
+
+  function cleanSubtask(s: Subtask): Subtask {
+    return {
+      id: s.id,
+      title: s.title.trim(),
+      ...(s.emoji ? { emoji: s.emoji } : {}),
+      ...(s.days?.length ? { days: [...s.days].sort() } : {}),
+      ...(s.optional ? { optional: true } : {}),
+      ...(s.time ? { time: s.time } : {}),
+      ...(s.time && s.nag ? { nag: s.nag } : {}),
+    }
   }
 
   function save() {
@@ -72,19 +101,15 @@
       title: title.trim(),
       time: time || undefined,
       notes: notes.trim() || undefined,
+      color,
+      reminder: time && remind >= 0 ? { every: remind } : undefined,
       archived: paused || undefined,
       createdOn: routine?.createdOn ?? app.today,
       schedule:
         mode === 'weekly'
           ? { type: 'weekly', days: [...days].sort() }
           : { type: 'interval', every: Math.floor(every), start },
-      subtasks: subtasks
-        .filter((s) => s.title.trim())
-        .map((s) => ({
-          id: s.id,
-          title: s.title.trim(),
-          ...(s.days?.length ? { days: [...s.days].sort() } : {}),
-        })),
+      subtasks: subtasks.filter((s) => s.title.trim()).map(cleanSubtask),
     })
     open = false
   }
@@ -122,6 +147,43 @@
         <input class="field w-32" type="time" bind:value={time} />
       </label>
     </div>
+
+    {#if time}
+      <label class="flex items-center justify-between gap-4" transition:slide={{ duration: 150 }}>
+        <span class="flex items-center gap-2">
+          <Bell size={16} class="text-text-muted" /> Erinnern
+        </span>
+        <select class="field w-40" bind:value={remind}>
+          <option value={-1}>Nein</option>
+          {#each INTERVALS as m (m)}
+            <option value={m}>{m ? `${intervalLabel(m)}, bis erledigt` : 'Einmal'}</option>
+          {/each}
+        </select>
+      </label>
+    {/if}
+
+    <section class="flex flex-col gap-2">
+      <span class="text-label text-text-muted">Farbe</span>
+      <div class="flex flex-wrap gap-2" role="radiogroup" aria-label="Farbe">
+        {#each ROUTINE_COLORS as c (c.key)}
+          {@const active = (color ?? 'fuchsia') === c.key}
+          <button
+            type="button"
+            role="radio"
+            aria-checked={active}
+            aria-label={c.label}
+            title={c.label}
+            class={[
+              'grid size-9 place-items-center rounded-full border-2 transition-colors',
+              active ? 'border-text' : 'border-transparent',
+            ]}
+            onclick={() => (color = c.key === 'fuchsia' ? undefined : c.key)}
+          >
+            <span class="size-6 rounded-full" style:background={routineColor(c.key)}></span>
+          </button>
+        {/each}
+      </div>
+    </section>
 
     <section class="flex flex-col gap-3">
       <span class="text-label text-text-muted">Rhythmus</span>
@@ -163,15 +225,40 @@
     <section class="flex flex-col gap-2">
       <span class="text-label text-text-muted">Schritte</span>
       {#if subtasks.length}
-        <ul class="flex flex-col gap-2">
+        <ul
+          class="flex flex-col gap-2"
+          use:sortable={{ onmove: (from, to) => (subtasks = moveItem(subtasks, from, to)) }}
+        >
           {#each subtasks as sub, i (sub.id)}
-            <li class="rounded-md border border-border px-2 pt-1 pb-1.5">
-              <div class="flex items-center gap-1">
+            {@const meta = summary(sub)}
+            <li data-sort class="rounded-md border border-border py-1 pr-1">
+              <div class="flex items-center">
+                <span
+                  data-handle
+                  class="grid h-10 w-8 shrink-0 place-items-center text-text-muted"
+                  aria-label="Zum Verschieben ziehen"
+                  role="img"
+                >
+                  <GripVertical size={18} />
+                </span>
+                {#if sub.emoji}<span class="pr-1 text-[18px]">{sub.emoji}</span>{/if}
                 <input
-                  class="field min-h-10 flex-1 border-transparent bg-transparent px-2"
+                  class="field min-h-10 flex-1 border-transparent bg-transparent px-1"
                   bind:value={sub.title}
                   aria-label="Schritt"
                 />
+                <button
+                  type="button"
+                  class={[
+                    'grid size-10 shrink-0 place-items-center rounded-full hover:text-text',
+                    detailsOpen === sub.id || meta.length ? 'text-primary' : 'text-text-muted',
+                  ]}
+                  aria-label="Optionen"
+                  aria-expanded={detailsOpen === sub.id}
+                  onclick={() => (detailsOpen = detailsOpen === sub.id ? null : sub.id)}
+                >
+                  <SlidersHorizontal size={18} />
+                </button>
                 <button
                   type="button"
                   class="grid size-10 shrink-0 place-items-center rounded-full text-text-muted hover:text-text"
@@ -181,49 +268,57 @@
                   <Trash2 size={18} />
                 </button>
               </div>
-              <div class="flex items-center gap-1 pl-2">
-                <button
-                  type="button"
-                  class={[
-                    'inline-flex h-8 items-center gap-1.5 rounded-sm text-small',
-                    sub.days?.length ? 'text-primary' : 'text-text-muted',
-                  ]}
-                  aria-expanded={dayEditing === sub.id}
-                  onclick={() => (dayEditing = dayEditing === sub.id ? null : sub.id)}
+              {#if meta.length && detailsOpen !== sub.id}
+                <p class="pb-1 pl-8 text-small text-text-muted">{meta.join(' · ')}</p>
+              {/if}
+              {#if detailsOpen === sub.id}
+                <div
+                  class="flex flex-col gap-4 px-3 pt-2 pb-3"
+                  transition:slide={{ duration: 150 }}
                 >
-                  <CalendarDays size={15} />
-                  {sub.days?.length ? describeDays(sub.days, app.settings.weekStart) : 'Immer'}
-                </button>
-                <span class="flex-1"></span>
-                <button
-                  type="button"
-                  class="grid size-8 place-items-center rounded-full text-text-muted disabled:opacity-30"
-                  aria-label="Nach oben"
-                  disabled={i === 0}
-                  onclick={() => move(i, -1)}
-                >
-                  <ArrowUp size={16} />
-                </button>
-                <button
-                  type="button"
-                  class="grid size-8 place-items-center rounded-full text-text-muted disabled:opacity-30"
-                  aria-label="Nach unten"
-                  disabled={i === subtasks.length - 1}
-                  onclick={() => move(i, 1)}
-                >
-                  <ArrowDown size={16} />
-                </button>
-              </div>
-              {#if dayEditing === sub.id}
-                <div class="flex flex-col gap-2 px-2 pt-1 pb-1">
-                  <p class="text-small text-text-muted">
-                    Nur an diesen Tagen. Nichts gewählt heißt: immer, wenn die Routine dran ist.
-                  </p>
-                  <WeekdayPicker
-                    bind:value={() => sub.days ?? [], (v) => (sub.days = v)}
-                    weekStart={app.settings.weekStart}
-                    size="sm"
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-small text-text-muted">Emoji</span>
+                    <EmojiPicker bind:value={sub.emoji} />
+                  </div>
+                  <div class="flex flex-col gap-1.5">
+                    <span class="text-small text-text-muted">
+                      Nur an diesen Tagen (nichts gewählt = immer)
+                    </span>
+                    <WeekdayPicker
+                      bind:value={() => sub.days ?? [], (v) => (sub.days = v)}
+                      weekStart={app.settings.weekStart}
+                      size="sm"
+                    />
+                  </div>
+                  <Switch
+                    bind:checked={() => !!sub.optional, (v) => (sub.optional = v || undefined)}
+                    label="Optional"
+                    hint="Zählt nicht für „erledigt“. Der Ring wird schon ohne voll."
                   />
+                  <label class="flex items-center justify-between gap-4">
+                    <span>Uhrzeit</span>
+                    <input class="field w-32" type="time" bind:value={sub.time} />
+                  </label>
+                  {#if sub.time}
+                    <label class="flex items-center justify-between gap-4">
+                      <span>
+                        <span class="block">Wichtig</span>
+                        <span class="block text-small text-text-muted">
+                          Ab der Uhrzeit immer wieder erinnern, bis abgehakt.
+                        </span>
+                      </span>
+                      <select
+                        class="field w-36"
+                        value={sub.nag ?? 0}
+                        onchange={(e) => (sub.nag = Number(e.currentTarget.value) || undefined)}
+                      >
+                        <option value={0}>Nein</option>
+                        {#each INTERVALS.slice(1) as m (m)}
+                          <option value={m}>{intervalLabel(m)}</option>
+                        {/each}
+                      </select>
+                    </label>
+                  {/if}
                 </div>
               {/if}
             </li>
@@ -251,7 +346,10 @@
           <Plus size={20} />
         </button>
       </div>
-      <p class="text-small text-text-muted">Ohne Schritte wird die Routine als Ganzes abgehakt.</p>
+      <p class="text-small text-text-muted">
+        Ohne Schritte wird die Routine als Ganzes abgehakt. Am Griff ziehen zum Sortieren.
+        {#if !isNative}Erinnerungen kommen nur in der Android-App.{/if}
+      </p>
     </section>
 
     <label class="flex flex-col gap-1.5">

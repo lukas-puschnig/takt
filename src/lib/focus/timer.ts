@@ -40,6 +40,19 @@ export interface TimerRun {
   round: number
   goal?: string
   todoId?: string
+  /** Was in der Pause nach diesem Takt passieren soll. */
+  breakTask?: string
+  /** Eigene Taktlänge (ms) statt der Voreinstellung. */
+  focusMs?: number
+  /** Tagesplan: feste Takte; danach ist der Lauf beendet. */
+  blocks?: Block[]
+}
+
+/** Ein geplanter Takt mit der Pause danach (ms; pause 0 = letzter Takt). */
+export interface Block {
+  focus: number
+  pause: number
+  long: boolean
 }
 
 export interface PhaseEnd {
@@ -82,6 +95,32 @@ export function phaseMs(profile: FocusProfile, phase: Phase): number {
   )
 }
 
+/** Länge der Phase, die als Nächstes in `base` beginnt (round ist schon hochgezählt). */
+function durationFor(base: TimerRun, profile: FocusProfile, phase: Phase): number {
+  if (base.blocks) {
+    return phase === 'focus'
+      ? (base.blocks[base.round]?.focus ?? 0)
+      : (base.blocks[base.round - 1]?.pause ?? 0)
+  }
+  if (phase === 'focus' && base.focusMs) return base.focusMs
+  return phaseMs(profile, phase)
+}
+
+/** Plan vollständig abgearbeitet. */
+export const isFinished = (run: TimerRun) => !!run.blocks && run.round >= run.blocks.length
+
+function finish(base: TimerRun, at: number): TimerRun {
+  return {
+    ...base,
+    phase: 'focus',
+    status: 'ready',
+    duration: 0,
+    remaining: 0,
+    startedAt: at,
+    endsAt: at,
+  }
+}
+
 function begin(
   base: TimerRun,
   phase: Phase,
@@ -89,7 +128,7 @@ function begin(
   at: number,
   run: boolean,
 ): TimerRun {
-  const duration = phaseMs(profile, phase)
+  const duration = durationFor(base, profile, phase)
   return {
     ...base,
     phase,
@@ -101,12 +140,19 @@ function begin(
   }
 }
 
+export interface StartOptions {
+  goal?: string
+  todoId?: string
+  breakTask?: string
+  focusMs?: number
+  blocks?: Block[]
+}
+
 export function start(
   mode: FocusMode,
   profile: FocusProfile,
   now: number,
-  goal?: string,
-  todoId?: string,
+  opts: StartOptions = {},
 ): TimerRun {
   const base: TimerRun = {
     mode,
@@ -117,15 +163,21 @@ export function start(
     duration: 0,
     startedAt: now,
     round: 0,
-    goal,
-    todoId,
+    ...opts,
   }
   return begin(base, 'focus', profile, now, true)
 }
 
 /** Den wartenden Takt (status ready) starten. */
 export function startReady(run: TimerRun, now: number): TimerRun {
+  if (isFinished(run)) return run
   return { ...run, status: 'running', startedAt: now, endsAt: now + run.remaining }
+}
+
+/** Länge des wartenden bzw. nächsten Takts ändern (ms). */
+export function setFocusLength(run: TimerRun, ms: number): TimerRun {
+  if (run.status !== 'ready' || run.blocks) return run
+  return { ...run, focusMs: ms, duration: ms, remaining: ms }
 }
 
 export function remainingMs(run: TimerRun, now: number): number {
@@ -159,7 +211,7 @@ function ended(run: TimerRun, at: number, complete: boolean): PhaseEnd {
 /**
  * Nächste Phase nach dem Ende der aktuellen.
  * Nach Fokus beginnt die Pause sofort; nach einer Pause wartet der nächste Takt
- * (oder startet sofort, wenn `autoFocus`).
+ * (oder startet sofort, wenn `autoFocus` oder ein Tagesplan läuft).
  */
 export function next(
   run: TimerRun,
@@ -169,10 +221,16 @@ export function next(
 ): TimerRun {
   if (run.phase === 'focus') {
     const round = run.round + 1
+    if (run.blocks) {
+      const block = run.blocks[round - 1]
+      if (!block || !block.pause || round >= run.blocks.length) return finish({ ...run, round }, at)
+      return begin({ ...run, round }, block.long ? 'long' : 'break', profile, at, true)
+    }
     const phase: Phase = round % Math.max(1, profile.every) === 0 ? 'long' : 'break'
     return begin({ ...run, round }, phase, profile, at, true)
   }
-  return begin(run, 'focus', profile, at, autoFocus)
+  if (isFinished(run)) return finish(run, at)
+  return begin(run, 'focus', profile, at, autoFocus || !!run.blocks)
 }
 
 /** Holt alle Phasen nach, die bis `now` abgelaufen sind. */

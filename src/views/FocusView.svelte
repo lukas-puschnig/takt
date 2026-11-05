@@ -1,33 +1,52 @@
 <script lang="ts">
-  import { Bell, Pause, Play, SkipForward, Square, Trash2 } from '@lucide/svelte'
-  import { plural } from '../lib/routines/format'
+  import {
+    Bell,
+    CalendarClock,
+    Coffee,
+    Pause,
+    Play,
+    SkipForward,
+    Square,
+    Trash2,
+  } from '@lucide/svelte'
+  import DayPlanner from '../components/focus/DayPlanner.svelte'
+  import TimerDial from '../components/focus/TimerDial.svelte'
+  import CheckCircle from '../components/ui/CheckCircle.svelte'
+  import Segmented from '../components/ui/Segmented.svelte'
+  import { BREAK_IDEAS, QUICK_MINUTES } from '../lib/focus/breaks'
+  import type { DayPlan } from '../lib/focus/plan'
   import {
     clockTime,
     formatClock,
     formatMinutes,
+    isFinished,
     MODE_LABEL,
     PHASE_LABEL,
     type FocusMode,
   } from '../lib/focus/timer'
+  import { plural } from '../lib/routines/format'
   import { canNotify, permission, requestPermission } from '../lib/signals'
   import { app } from '../lib/state/app.svelte'
   import { focus } from '../lib/state/focus.svelte'
   import { todosFor } from '../lib/todos/todos'
-  import CheckCircle from '../components/ui/CheckCircle.svelte'
-  import ProgressRing from '../components/ui/ProgressRing.svelte'
-  import Segmented from '../components/ui/Segmented.svelte'
 
   let goal = $state('')
   let todoId = $state<string | undefined>(undefined)
+  let breakTask = $state('')
   let perm = $state(permission())
+  let plannerOpen = $state(false)
 
   const run = $derived(focus.run)
+  const finished = $derived(!!run && isFinished(run))
   const phase = $derived(run?.phase ?? 'focus')
-  const isBreak = $derived(phase !== 'focus')
+  const isBreak = $derived(phase !== 'focus' && run?.status !== 'ready')
   const phaseColor = $derived(isBreak ? 'var(--color-phase-break)' : 'var(--color-phase-focus)')
-  const ratio = $derived(1 - focus.remaining / focus.duration)
+  const ratio = $derived(focus.duration ? 1 - focus.remaining / focus.duration : 0)
   /** Ziel wird vor dem Takt festgelegt (noch kein Timer oder nächster Takt wartet). */
-  const choosing = $derived(!run || run.status === 'ready')
+  const choosing = $derived((!run || run.status === 'ready') && !finished)
+  /** Taktlänge lässt sich am Ring drehen, solange kein Plan läuft. */
+  const adjustable = $derived(choosing && !run?.blocks)
+  const minutes = $derived(Math.round(focus.duration / 60_000))
 
   const openTodos = $derived(todosFor(app.todos, app.today, app.today).open.slice(0, 6))
   const linkedTodo = $derived(run?.todoId ? app.todos.find((t) => t.id === run.todoId) : undefined)
@@ -38,21 +57,31 @@
     sessions.filter((s) => s.mode === 'deep').reduce((sum, s) => sum + s.minutes, 0),
   )
 
-  const every = $derived(focus.profile.every)
+  // Rundenpunkte: beim Tagesplan alle Takte, sonst bis zur langen Pause.
+  const dots = $derived(run?.blocks ? run.blocks.length : focus.profile.every)
   const filled = $derived.by(() => {
     if (!run) return 0
-    const r = run.round % every
-    return run.phase === 'long' && r === 0 ? every : r
+    if (run.blocks) return run.round
+    const r = run.round % dots
+    return run.phase === 'long' && r === 0 ? dots : r
   })
 
-  const label = $derived(
-    !run ? 'Bereit' : run.status === 'ready' ? 'Nächster Takt' : PHASE_LABEL[run.phase],
-  )
+  const label = $derived.by(() => {
+    if (!run) return 'Bereit'
+    if (finished) return 'Geschafft'
+    if (run.status === 'ready') return 'Nächster Takt'
+    return PHASE_LABEL[run.phase]
+  })
   const hint = $derived.by(() => {
-    if (!run) return `${MODE_LABEL[focus.mode]} · ${focus.profile.focus} min`
+    if (!run) return `${MODE_LABEL[focus.mode]} · bis ${clockTime(focus.now + focus.duration)}`
+    if (finished) return 'Tagesplan abgeschlossen'
     if (run.status === 'paused') return 'Pausiert'
-    if (run.status === 'ready') return `Takt ${(run.round % every) + 1} von ${every}`
-    return `bis ${clockTime(run.endsAt)}`
+    if (run.status === 'ready')
+      return `Takt ${run.round + 1} · bis ${clockTime(focus.now + focus.duration)}`
+    const planEnd = run.blocks
+      ? ` · Takt ${Math.min(run.round + (run.phase === 'focus' ? 1 : 0), dots)} von ${dots}`
+      : ''
+    return `bis ${clockTime(run.endsAt)}${planEnd}`
   })
 
   function pickTodo(id: string, title: string) {
@@ -65,13 +94,30 @@
     }
   }
 
-  function begin() {
+  function options() {
     const g = goal.trim() || undefined
-    const t = g && todoId ? todoId : undefined
-    if (run?.status === 'ready') focus.startNext(g, t)
-    else focus.start(g, t)
+    return {
+      goal: g,
+      todoId: g && todoId ? todoId : undefined,
+      breakTask: breakTask.trim() || undefined,
+    }
+  }
+
+  function reset() {
     goal = ''
     todoId = undefined
+    breakTask = ''
+  }
+
+  function begin() {
+    if (run?.status === 'ready') focus.startNext(options())
+    else focus.start(options())
+    reset()
+  }
+
+  function startPlan(plan: DayPlan) {
+    focus.startPlan(plan, options())
+    reset()
   }
 
   function stop() {
@@ -85,6 +131,13 @@
     perm = await requestPermission()
     if (perm === 'granted') app.updateSettings({ notify: true })
   }
+
+  const chip = (active: boolean) => [
+    'h-8 max-w-full truncate rounded-pill border px-3 text-small transition-colors',
+    active
+      ? 'border-primary bg-primary/10 text-primary'
+      : 'border-border text-text-muted hover:text-text',
+  ]
 </script>
 
 <section class="flex flex-col gap-6">
@@ -99,6 +152,11 @@
         {/if}
       </p>
     </div>
+    {#if !run}
+      <button type="button" class="btn btn-sm btn-secondary" onclick={() => (plannerOpen = true)}>
+        <CalendarClock size={16} /> Tag planen
+      </button>
+    {/if}
   </header>
 
   {#if !run}
@@ -115,34 +173,54 @@
   <div class="flex flex-col items-center gap-5">
     <div class="flex flex-col items-center gap-1 text-center">
       <p class="text-label transition-colors duration-250" style:color={phaseColor}>
-        {label}{#if run}<span class="text-text-muted"> · {MODE_LABEL[run.mode]}</span>{/if}
+        {label}{#if run && !finished}<span class="text-text-muted">
+            · {run.blocks ? 'Tagesplan' : MODE_LABEL[run.mode]}</span
+          >{/if}
       </p>
       <p class="text-small text-text-muted">{hint}</p>
     </div>
 
-    <ProgressRing {ratio} size={280} stroke={6} color={phaseColor} linear>
-      <div class="flex flex-col items-center">
+    <TimerDial
+      {ratio}
+      color={phaseColor}
+      {adjustable}
+      {minutes}
+      onchange={(m) => focus.setMinutes(m)}
+    >
+      <div class="flex flex-col items-center gap-1 px-10 text-center">
         <span class="timer">{formatClock(focus.remaining)}</span>
-        {#if run?.goal && !choosing}
+        {#if isBreak && run?.breakTask}
+          <span class="flex items-center gap-1 text-small text-text">
+            <Coffee size={14} class="shrink-0 text-accent" />{run.breakTask}
+          </span>
+        {:else if run?.goal && !choosing}
           <span class="max-w-48 truncate text-small text-text-muted">{run.goal}</span>
+        {:else if adjustable}
+          <span class="text-small text-text-muted">Ring drehen</span>
         {/if}
       </div>
-    </ProgressRing>
+    </TimerDial>
 
-    <div
-      class="flex gap-1.5"
-      role="img"
-      aria-label="{filled} von {every} Takten bis zur langen Pause"
-    >
-      {#each Array.from({ length: every }, (_, i) => i) as i (i)}
-        <span
-          class={[
-            'size-2.5 rounded-full transition-colors duration-250',
-            i < filled ? 'bg-primary' : isBreak && i === filled ? 'bg-accent' : 'bg-border',
-          ]}
-        ></span>
-      {/each}
-    </div>
+    {#if adjustable}
+      <div class="flex flex-wrap justify-center gap-2" role="group" aria-label="Taktlänge">
+        {#each QUICK_MINUTES as m (m)}
+          <button type="button" class={chip(minutes === m)} onclick={() => focus.setMinutes(m)}>
+            {m} min
+          </button>
+        {/each}
+      </div>
+    {:else}
+      <div class="flex gap-1.5" role="img" aria-label="{filled} von {dots} Takten">
+        {#each Array.from({ length: dots }, (_, i) => i) as i (i)}
+          <span
+            class={[
+              'size-2.5 rounded-full transition-colors duration-250',
+              i < filled ? 'bg-primary' : isBreak && i === filled ? 'bg-accent' : 'bg-border',
+            ]}
+          ></span>
+        {/each}
+      </div>
+    {/if}
   </div>
 
   {#if choosing}
@@ -162,12 +240,7 @@
           {#each openTodos as todo (todo.id)}
             <button
               type="button"
-              class={[
-                'h-8 max-w-full truncate rounded-pill border px-3 text-small transition-colors',
-                todoId === todo.id
-                  ? 'border-primary bg-primary/10 text-primary'
-                  : 'border-border text-text-muted hover:text-text',
-              ]}
+              class={chip(todoId === todo.id)}
               onclick={() => pickTodo(todo.id, todo.title)}
             >
               {todo.title}
@@ -176,21 +249,54 @@
         </div>
       {/if}
     </div>
-  {:else if linkedTodo && run?.phase === 'focus'}
-    <button
-      type="button"
-      class="flex min-h-11 items-center gap-3 self-center rounded-pill border border-border bg-surface px-4"
-      onclick={() => app.toggleTodo(linkedTodo.id)}
+    <div class="flex flex-col gap-3">
+      <label class="flex flex-col gap-1.5">
+        <span class="text-label text-text-muted">Und in der Pause danach?</span>
+        <input class="field bg-surface" bind:value={breakTask} placeholder="z. B. Seated Twist" />
+      </label>
+      <div class="flex flex-wrap gap-2">
+        {#each BREAK_IDEAS as idea (idea)}
+          <button
+            type="button"
+            class={chip(breakTask === idea)}
+            onclick={() => (breakTask = breakTask === idea ? '' : idea)}
+          >
+            {idea}
+          </button>
+        {/each}
+      </div>
+    </div>
+  {:else if run && !finished && run.phase === 'focus'}
+    {#if linkedTodo}
+      <button
+        type="button"
+        class="flex min-h-11 items-center gap-3 self-center rounded-pill border border-border bg-surface px-4"
+        onclick={() => app.toggleTodo(linkedTodo.id)}
+      >
+        <CheckCircle checked={!!linkedTodo.doneOn} size={20} />
+        <span class={['text-small', linkedTodo.doneOn && 'text-text-muted line-through']}>
+          {linkedTodo.title}
+        </span>
+      </button>
+    {/if}
+    <label
+      class="flex items-center gap-2 self-center rounded-pill border border-border bg-surface px-4"
     >
-      <CheckCircle checked={!!linkedTodo.doneOn} size={20} />
-      <span class={['text-small', linkedTodo.doneOn && 'text-text-muted line-through']}>
-        {linkedTodo.title}
-      </span>
-    </button>
+      <Coffee size={16} class="shrink-0 text-accent" />
+      <input
+        class="min-h-11 w-56 bg-transparent text-small outline-none placeholder:text-text-muted"
+        value={run.breakTask ?? ''}
+        placeholder="In der Pause: …"
+        aria-label="Was in der Pause passiert"
+        onchange={(e) => focus.setBreakTask(e.currentTarget.value.trim())}
+      />
+    </label>
   {/if}
 
   <div class="flex items-center justify-center gap-3">
-    {#if choosing}
+    {#if finished}
+      <button type="button" class="btn btn-primary" onclick={() => focus.stop()}>Fertig</button>
+    {:else if choosing}
       <button type="button" class="btn btn-primary" onclick={begin}>
         <Play size={20} />
         {run ? 'Takt starten' : 'Starten'}
@@ -212,7 +318,7 @@
         <Play size={20} /> Weiter
       </button>
     {/if}
-    {#if run}
+    {#if run && !finished}
       <button type="button" class="btn px-4 btn-secondary" aria-label="Beenden" onclick={stop}>
         <Square size={18} />
       </button>
@@ -301,6 +407,8 @@
     </div>
   {/if}
 </section>
+
+<DayPlanner bind:open={plannerOpen} onstart={startPlan} />
 
 <style>
   .timer {

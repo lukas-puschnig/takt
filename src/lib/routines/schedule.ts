@@ -20,16 +20,38 @@ export function subtasksFor(routine: Routine, day: DateKey): Subtask[] {
   return routine.subtasks.filter((s) => !s.days?.length || s.days.includes(wd))
 }
 
-/** IDs, die für diesen Tag abgehakt werden müssen; ohne Subtasks nur SELF. */
+/**
+ * IDs, die für diesen Tag abgehakt werden müssen; ohne Subtasks nur SELF.
+ * Optionale Schritte zählen nicht – außer alle sind optional, dann zählen alle.
+ */
 export function requiredIds(routine: Routine, day: DateKey): string[] {
   const subs = subtasksFor(routine, day)
-  return subs.length ? subs.map((s) => s.id) : [SELF]
+  if (!subs.length) return [SELF]
+  const mandatory = subs.filter((s) => !s.optional)
+  return (mandatory.length ? mandatory : subs).map((s) => s.id)
+}
+
+/** Optionale Schritte des Tages, die nicht schon als Pflicht zählen. */
+export function optionalIds(routine: Routine, day: DateKey): string[] {
+  const required = new Set(requiredIds(routine, day))
+  return subtasksFor(routine, day)
+    .filter((s) => s.optional && !required.has(s.id))
+    .map((s) => s.id)
 }
 
 export function progress(routine: Routine, day: DateKey, log: RoutineLog | undefined) {
   const required = requiredIds(routine, day)
-  const done = required.filter((id) => log?.done.includes(id)).length
-  return { done, total: required.length, ratio: done / required.length }
+  const optional = optionalIds(routine, day)
+  const isDone = (id: string) => !!log?.done.includes(id)
+  const done = required.filter(isDone).length
+  const optionalDone = optional.filter(isDone).length
+  return {
+    done,
+    total: required.length,
+    ratio: done / required.length,
+    optionalDone,
+    optionalTotal: optional.length,
+  }
 }
 
 /** Neuer Log-Eintrag nach dem Umschalten eines Subtasks (oder SELF). */
@@ -45,9 +67,16 @@ export function toggleItem(
   return withCompletion(routine, day, [...current])
 }
 
-/** Ganze Routine abhaken bzw. zurücksetzen. */
-export function setAll(routine: Routine, day: DateKey, done: boolean): RoutineLog {
-  return withCompletion(routine, day, done ? requiredIds(routine, day) : [])
+/** Alle Pflichtschritte abhaken (bereits erledigte optionale bleiben) bzw. alles zurücksetzen. */
+export function setAll(
+  routine: Routine,
+  day: DateKey,
+  done: boolean,
+  log?: RoutineLog,
+): RoutineLog {
+  if (!done) return withCompletion(routine, day, [])
+  const ids = new Set([...(log?.done ?? []), ...requiredIds(routine, day)])
+  return withCompletion(routine, day, [...ids])
 }
 
 function withCompletion(routine: Routine, day: DateKey, done: string[]): RoutineLog {

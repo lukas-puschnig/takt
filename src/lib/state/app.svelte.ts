@@ -1,3 +1,4 @@
+import { moveItem } from '../actions/sortable'
 import { logicalToday, type DateKey } from '../date'
 import { remindKey, remindKeyAt } from '../todos/todos'
 import type { FocusSession } from '../focus/timer'
@@ -115,7 +116,7 @@ class AppState {
   }
 
   setRoutineDone(routine: Routine, day: DateKey, done: boolean) {
-    this.#writeLog(routine.id, day, setAll(routine, day, done))
+    this.#writeLog(routine.id, day, setAll(routine, day, done, this.logFor(routine.id, day)))
   }
 
   // --- Routinen verwalten -----------------------------------------------
@@ -138,13 +139,9 @@ class AppState {
     this.#persist()
   }
 
-  moveRoutine(id: string, delta: -1 | 1) {
-    const from = this.routines.findIndex((r) => r.id === id)
-    const to = from + delta
-    if (from === -1 || to < 0 || to >= this.routines.length) return
-    const next = [...this.routines]
-    ;[next[from], next[to]] = [next[to], next[from]]
-    this.routines = next
+  reorderRoutines(from: number, to: number) {
+    if (from === to || to < 0 || to >= this.routines.length) return
+    this.routines = moveItem(this.routines, from, to)
     this.#persist()
   }
 

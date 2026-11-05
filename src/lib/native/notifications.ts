@@ -19,8 +19,20 @@ export const CHANNEL = {
 export const TIMER_STATUS_ID = 1
 const TIMER_END_IDS = [2, 3, 4, 5, 6, 7, 8, 9]
 
-export type NotificationAction =
-  { action: 'done' | 'snooze' | 'open'; todoId: string } | { action: 'open'; url: string }
+/** Zusatzdaten einer Benachrichtigung, damit Aktionen wissen, worum es geht. */
+export interface NotificationExtra {
+  todoId?: string
+  routineId?: string
+  subtaskId?: string
+  day?: string
+  url?: string
+}
+
+/** actionId: 'done' | 'snooze' oder 'tap' (Benachrichtigung selbst angetippt). */
+export interface NotificationAction {
+  actionId: string
+  extra: NotificationExtra
+}
 
 export async function setupNative(onAction: (a: NotificationAction) => void) {
   if (!isNative) return
@@ -59,19 +71,16 @@ export async function setupNative(onAction: (a: NotificationAction) => void) {
           { id: 'snooze', title: 'In 1 Stunde' },
         ],
       },
+      {
+        id: 'routine',
+        actions: [{ id: 'done', title: 'Erledigt' }],
+      },
     ],
   })
   await LocalNotifications.addListener(
     'localNotificationActionPerformed',
-    ({ actionId, notification }) => {
-      const extra = (notification.extra ?? {}) as { todoId?: string; url?: string }
-      if (extra.todoId) {
-        const action = actionId === 'done' || actionId === 'snooze' ? actionId : 'open'
-        onAction({ action, todoId: extra.todoId })
-      } else {
-        onAction({ action: 'open', url: extra.url ?? '#/heute' })
-      }
-    },
+    ({ actionId, notification }) =>
+      onAction({ actionId, extra: (notification.extra ?? {}) as NotificationExtra }),
   )
 }
 
@@ -103,13 +112,13 @@ export async function openExactAlarmSettings() {
 // --- Erinnerungen -----------------------------------------------------------
 
 /**
- * Ersetzt alle geplanten Erinnerungen durch `plan`. Bereits angezeigte Aufgaben-Erinnerungen
- * verschwinden, sobald die Aufgabe erledigt, gelöscht oder verschoben ist.
+ * Ersetzt alle geplanten Erinnerungen durch `plan`. Bereits angezeigte Erinnerungen an
+ * Aufgaben und Routinen verschwinden, sobald `stillDue` sie nicht mehr als fällig meldet.
  */
 export async function syncReminders(
   plan: PlannedReminder[],
   sticky: boolean,
-  isStillDue: (todoId: string) => boolean,
+  stillDue: (extra: NotificationExtra) => boolean,
 ) {
   if (!isNative) return
   const { notifications: pending } = await LocalNotifications.getPending()
@@ -118,33 +127,43 @@ export async function syncReminders(
     await LocalNotifications.cancel({ notifications: stale.map((n) => ({ id: n.id })) })
 
   const { notifications: delivered } = await LocalNotifications.getDeliveredNotifications()
-  const gone = delivered.filter((n) => {
-    if (n.id < 100) return false
-    const todoId = (n.extra as { todoId?: string } | undefined)?.todoId
-    // Tageserinnerungen bleiben stehen; Aufgaben nur, solange sie fällig sind.
-    if (n.id >= TODO_ID_MIN) return !todoId || !isStillDue(todoId)
-    return false
-  })
+  // Tageserinnerungen (100–999) bleiben stehen, der Rest nur, solange er fällig ist.
+  const gone = delivered.filter(
+    (n) => n.id >= TODO_ID_MIN && !stillDue((n.extra ?? {}) as NotificationExtra),
+  )
   if (gone.length) await LocalNotifications.removeDeliveredNotifications({ notifications: gone })
 
   if (!plan.length) return
   await LocalNotifications.schedule({
-    notifications: plan.map((r): LocalNotificationSchema => ({
-      id: r.id,
-      title: r.title,
-      body: r.body,
-      channelId: CHANNEL.reminders,
-      schedule: { at: new Date(r.at), allowWhileIdle: true },
-      ...(r.kind === 'todo'
-        ? {
-            actionTypeId: 'todo',
-            extra: { todoId: r.todoId },
-            // „Bleibt da, bis erledigt“: nicht wegwischbar, verschwindet über „Erledigt“.
-            ongoing: sticky,
-            autoCancel: !sticky,
-          }
-        : { extra: { url: '#/heute' }, autoCancel: true }),
-    })),
+    notifications: plan.map((r): LocalNotificationSchema => {
+      const base = {
+        id: r.id,
+        title: r.title,
+        body: r.body,
+        channelId: CHANNEL.reminders,
+        schedule: { at: new Date(r.at), allowWhileIdle: true },
+      }
+      if (r.kind === 'todo') {
+        return {
+          ...base,
+          actionTypeId: 'todo',
+          extra: { todoId: r.todoId },
+          // „Bleibt da, bis erledigt“: nicht wegwischbar, verschwindet über „Erledigt“.
+          ongoing: sticky,
+          autoCancel: !sticky,
+        }
+      }
+      if (r.kind === 'routine') {
+        return {
+          ...base,
+          actionTypeId: 'routine',
+          group: r.group,
+          extra: { routineId: r.routineId, subtaskId: r.subtaskId, day: r.day },
+          autoCancel: true,
+        }
+      }
+      return { ...base, extra: { url: '#/heute' }, autoCancel: true }
+    }),
   })
 }
 

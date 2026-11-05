@@ -70,6 +70,29 @@ describe('subtasks und Fortschritt', () => {
     expect(toggleItem(morning, MON, undefined, 'a').complete).toBe(false)
   })
 
+  it('zählt optionale Schritte nicht für „erledigt“', () => {
+    const r: Routine = {
+      ...morning,
+      subtasks: [
+        { id: 'a', title: 'Pflicht' },
+        { id: 'o', title: 'Kür', optional: true },
+      ],
+    }
+    const log = toggleItem(r, MON, undefined, 'a')
+    expect(log.complete).toBe(true)
+    expect(progress(r, MON, log)).toMatchObject({ ratio: 1, optionalDone: 0, optionalTotal: 1 })
+    const all = toggleItem(r, MON, log, 'o')
+    expect(progress(r, MON, all)).toMatchObject({ optionalDone: 1 })
+    // Ring antippen behält erledigte optionale Schritte
+    expect(setAll(r, MON, true, { done: ['o'], complete: false }).done.sort()).toEqual(['a', 'o'])
+  })
+
+  it('wertet nur optionale Schritte wie Pflicht', () => {
+    const r: Routine = { ...morning, subtasks: [{ id: 'o', title: 'Kür', optional: true }] }
+    expect(toggleItem(r, MON, undefined, 'o').complete).toBe(true)
+    expect(progress(r, MON, undefined).optionalTotal).toBe(0)
+  })
+
   it('nutzt SELF für Routinen ohne Subtasks', () => {
     const log = setAll(gym, MON, true)
     expect(log).toEqual({ done: [SELF], complete: true })

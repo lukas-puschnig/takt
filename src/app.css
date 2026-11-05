@@ -81,6 +81,17 @@
     outline: 2px solid var(--color-primary);
     outline-offset: 2px;
   }
+  /* Eintrag, der gerade per Griff verschoben wird (src/lib/actions/sortable.ts) */
+  [data-dragging] {
+    position: relative;
+    z-index: 1;
+    background: var(--color-surface);
+    box-shadow: var(--shadow-card);
+  }
+  [data-handle] {
+    touch-action: none;
+    cursor: grab;
+  }
 }
 
 /* Komponenten nach DESIGN.md §5 */

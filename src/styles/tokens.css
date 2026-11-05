@@ -16,6 +16,16 @@
   --color-text-muted: #6e5a69;
   --color-border: #e8dde4;
 
+  /* Akzentfarben für Routinen: gleiche Helligkeitsstufe wie Fuchsia, nur für Flächen/Ringe */
+  --routine-fuchsia: #d61f8c;
+  --routine-koralle: #f26a4b;
+  --routine-bernstein: #d9970b;
+  --routine-salbei: #5f9a6c;
+  --routine-petrol: #1d8a85;
+  --routine-himmel: #3487d1;
+  --routine-indigo: #6656d4;
+  --routine-pflaume: #9a45b0;
+
   /* Phasen */
   --color-phase-focus: var(--color-primary);
   --color-phase-break: var(--color-accent);
@@ -75,6 +85,14 @@
     --color-text: #f5eef3;
     --color-text-muted: #b79db0;
     --color-border: #3a2f40;
+    --routine-fuchsia: #ff4db2;
+    --routine-koralle: #ff8f6b;
+    --routine-bernstein: #f2b93b;
+    --routine-salbei: #8cc79a;
+    --routine-petrol: #3fbdb6;
+    --routine-himmel: #6bb2f2;
+    --routine-indigo: #9488f0;
+    --routine-pflaume: #c77ddb;
     --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.4);
   }
 }
@@ -89,6 +107,14 @@
   --color-text: #f5eef3;
   --color-text-muted: #b79db0;
   --color-border: #3a2f40;
+  --routine-fuchsia: #ff4db2;
+  --routine-koralle: #ff8f6b;
+  --routine-bernstein: #f2b93b;
+  --routine-salbei: #8cc79a;
+  --routine-petrol: #3fbdb6;
+  --routine-himmel: #6bb2f2;
+  --routine-indigo: #9488f0;
+  --routine-pflaume: #c77ddb;
   --shadow-card: 0 0 0 1px rgba(255, 255, 255, 0.06), 0 12px 32px rgba(0, 0, 0, 0.4);
 }
 

@@ -9,6 +9,8 @@ import {
   skip,
   start,
   startReady,
+  isFinished,
+  setFocusLength,
   stop,
   upcoming,
   type FocusMode,
@@ -24,6 +26,7 @@ import {
   unlockAudio,
   vibrate,
 } from '../signals'
+import type { DayPlan } from '../focus/plan'
 import { isNative, syncTimer } from '../native/notifications'
 import { app } from './app.svelte'
 
@@ -31,6 +34,12 @@ const KEY = 'takt:timer'
 const PATTERN = [250, 120, 250, 120, 500]
 /** Signale nur, wenn das Ende frisch ist – nicht beim Öffnen der App Stunden später. */
 const FRESH_MS = 3 * 60_000
+
+export interface TaskOptions {
+  goal?: string
+  todoId?: string
+  breakTask?: string
+}
 
 interface Stored {
   run: TimerRun | null
@@ -54,10 +63,15 @@ class FocusTimer {
   now = $state(Date.now())
   /** Gerade abgeschlossener Takt, der noch bewertet werden kann. */
   toRate = $state<string | null>(null)
+  /** Eigene Länge des nächsten Takts in Minuten (null = Voreinstellung des Modus). */
+  customMinutes = $state<number | null>(null)
 
   profile = $derived(app.settings.profiles[this.run?.mode ?? this.mode])
-  remaining = $derived(this.run ? remainingMs(this.run, this.now) : phaseMs(this.profile, 'focus'))
-  duration = $derived(this.run?.duration ?? phaseMs(this.profile, 'focus'))
+  #idleMs = $derived(
+    this.customMinutes ? this.customMinutes * 60_000 : phaseMs(this.profile, 'focus'),
+  )
+  remaining = $derived(this.run ? remainingMs(this.run, this.now) : this.#idleMs)
+  duration = $derived(this.run?.duration ?? this.#idleMs)
 
   init() {
     const stored = load()
@@ -112,10 +126,17 @@ class FocusTimer {
 
   /** Beschreibung der aktuellen Phase für Benachrichtigungen. */
   #describe(run: TimerRun): string {
+    if (isFinished(run)) return 'Tagesplan geschafft.'
     if (run.status === 'ready') return 'Der nächste Takt wartet auf dich.'
     if (run.status === 'paused') return `${PHASE_LABEL[run.phase]} pausiert.`
     const what =
-      run.phase === 'focus' ? (run.goal ? `Fokus: ${run.goal}` : 'Fokus') : PHASE_LABEL[run.phase]
+      run.phase === 'focus'
+        ? run.goal
+          ? `Fokus: ${run.goal}`
+          : 'Fokus'
+        : run.breakTask
+          ? `${PHASE_LABEL[run.phase]}: ${run.breakTask}`
+          : PHASE_LABEL[run.phase]
     return `${what} bis ${clockTime(run.endsAt)}`
   }
 
@@ -182,23 +203,60 @@ class FocusTimer {
 
   setMode(mode: FocusMode) {
     this.mode = mode
+    this.customMinutes = null
     this.#save()
   }
 
-  start(goal?: string, todoId?: string) {
+  /** Länge des nächsten Takts einstellen (vor dem Start oder solange er wartet). */
+  setMinutes(minutes: number) {
+    if (!this.run) {
+      this.customMinutes = minutes
+    } else if (this.run.status === 'ready') {
+      this.run = setFocusLength(this.run, minutes * 60_000)
+      this.#save()
+    }
+  }
+
+  start(opts: TaskOptions = {}) {
     unlockAudio()
     this.toRate = null
-    this.run = start(this.mode, app.settings.profiles[this.mode], Date.now(), goal, todoId)
+    const focusMs = this.customMinutes ? this.customMinutes * 60_000 : undefined
+    this.run = start(this.mode, app.settings.profiles[this.mode], Date.now(), {
+      ...opts,
+      focusMs,
+    })
     void this.#sync()
   }
 
-  /** Den wartenden nächsten Takt starten, optional mit neuem Ziel. */
-  startNext(goal?: string, todoId?: string) {
-    if (!this.run) return this.start(goal, todoId)
+  /** Tagesplan sofort starten; Takte und Pausen laufen ohne Nachfrage durch. */
+  startPlan(plan: DayPlan, opts: TaskOptions = {}) {
+    if (!plan.blocks.length) return
     unlockAudio()
     this.toRate = null
-    this.run = startReady({ ...this.run, goal, todoId }, Date.now())
+    this.run = start(plan.mode, app.settings.profiles[plan.mode], Date.now(), {
+      ...opts,
+      blocks: plan.blocks,
+    })
     void this.#sync()
+  }
+
+  /** Den wartenden nächsten Takt starten, mit neuem Ziel und neuer Pausenaufgabe. */
+  startNext(opts: TaskOptions = {}) {
+    if (!this.run) return this.start(opts)
+    unlockAudio()
+    this.toRate = null
+    this.run = startReady(
+      { ...this.run, goal: opts.goal, todoId: opts.todoId, breakTask: opts.breakTask },
+      Date.now(),
+    )
+    void this.#sync()
+  }
+
+  /** Was in der kommenden (oder laufenden) Pause passieren soll. */
+  setBreakTask(text: string | undefined) {
+    if (!this.run) return
+    this.run = { ...this.run, breakTask: text || undefined }
+    void this.#sync(false)
   }
 
   pause() {

@@ -1,7 +1,8 @@
 <script lang="ts">
-  import { ChevronDown, Clock, Flame, Pencil } from '@lucide/svelte'
+  import { BellRing, ChevronDown, Clock, Flame, Pencil } from '@lucide/svelte'
   import { slide } from 'svelte/transition'
   import type { DateKey } from '../../lib/date'
+  import { partialColor, routineColor } from '../../lib/routines/colors'
   import { describeDays, describeSchedule } from '../../lib/routines/format'
   import { isDue, progress, streak, subtasksFor } from '../../lib/routines/schedule'
   import { SELF, type Routine } from '../../lib/routines/types'
@@ -22,6 +23,10 @@
   const subtasks = $derived(subtasksFor(routine, day))
   const p = $derived(progress(routine, day, log))
   const complete = $derived(!!log?.complete)
+  const color = $derived(routineColor(routine.color))
+  /** Pflicht erledigt, aber optionale Schritte offen: Ring voll, aber blasser. */
+  const optionalOpen = $derived(p.optionalTotal - p.optionalDone)
+  const ringColor = $derived(complete && optionalOpen ? partialColor(color) : color)
   const streakCount = $derived(streak(routine, app.today, app.logs))
   // Zukünftige Tage sind nur Vorschau, nicht fällige Tage nur Info.
   const locked = $derived(day > app.today || !due)
@@ -44,9 +49,13 @@
           : `${routine.title} komplett abhaken`}
         onclick={() => app.setRoutineDone(routine, day, !complete)}
       >
-        <ProgressRing ratio={p.ratio} size={44} stroke={4}>
-          {#if complete}
-            <CheckCircle checked size={30} />
+        <ProgressRing ratio={p.ratio} size={44} stroke={4} color={ringColor}>
+          {#if complete && optionalOpen}
+            <span class="text-small text-text-muted tabular-nums" title="Optionale Schritte offen">
+              +{optionalOpen}
+            </span>
+          {:else if complete}
+            <CheckCircle checked size={30} {color} />
           {:else}
             <span class="text-small text-text-muted tabular-nums">{p.done}/{p.total}</span>
           {/if}
@@ -61,7 +70,7 @@
         aria-pressed={isDone(SELF)}
         onclick={() => app.toggle(routine, day, SELF)}
       >
-        <CheckCircle checked={isDone(SELF)} size={32} />
+        <CheckCircle checked={isDone(SELF)} size={32} {color} />
       </button>
     {/if}
 
@@ -124,15 +133,21 @@
             aria-pressed={done}
             onclick={() => app.toggle(routine, day, sub.id)}
           >
-            <CheckCircle checked={done} size={22} />
+            <CheckCircle checked={done} size={22} {color} dashed={sub.optional} />
             <span class={['flex-1 transition-colors', done && 'text-text-muted line-through']}>
-              {sub.title}
+              {#if sub.emoji}<span class="mr-1">{sub.emoji}</span>{/if}{sub.title}
             </span>
-            {#if sub.days?.length}
-              <span class="text-small text-text-muted"
-                >{describeDays(sub.days, app.settings.weekStart)}</span
-              >
-            {/if}
+            <span class="flex shrink-0 items-center gap-2 text-small text-text-muted">
+              {#if sub.optional}<span>optional</span>{/if}
+              {#if sub.time}
+                <span class={['inline-flex items-center gap-1', sub.nag && !done && 'text-text']}>
+                  {#if sub.nag}<BellRing size={13} />{:else}<Clock size={13} />{/if}{sub.time}
+                </span>
+              {/if}
+              {#if sub.days?.length}
+                <span>{describeDays(sub.days, app.settings.weekStart)}</span>
+              {/if}
+            </span>
           </button>
         </li>
       {/each}

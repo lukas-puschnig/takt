@@ -8,32 +8,63 @@ import {
   setupNative,
   syncReminders,
   type NotificationAction,
+  type NotificationExtra,
 } from './notifications'
 
 const SETUP_KEY = 'takt:native-setup'
 
-function handleAction(a: NotificationAction) {
-  if ('url' in a) {
-    location.hash = a.url
-    return
+function handleAction({ actionId, extra }: NotificationAction) {
+  if (extra.todoId) {
+    const todo = app.todos.find((t) => t.id === extra.todoId)
+    if (actionId === 'done') {
+      if (todo && !todo.doneOn) app.toggleTodo(todo.id)
+      void removeDelivered([todoNotificationId(extra.todoId)])
+      return
+    }
+    if (actionId === 'snooze') {
+      app.snoozeTodo(extra.todoId, 60)
+      void removeDelivered([todoNotificationId(extra.todoId)])
+      return
+    }
   }
-  const todo = app.todos.find((t) => t.id === a.todoId)
-  if (a.action === 'done') {
-    if (todo && !todo.doneOn) app.toggleTodo(todo.id)
-    void removeDelivered([todoNotificationId(a.todoId)])
-  } else if (a.action === 'snooze') {
-    app.snoozeTodo(a.todoId, 60)
-    void removeDelivered([todoNotificationId(a.todoId)])
-  } else {
-    app.selectedDay = app.today
-    location.hash = '#/heute'
+
+  if (extra.routineId && extra.day) {
+    const routine = app.routines.find((r) => r.id === extra.routineId)
+    if (routine && actionId === 'done') {
+      const log = app.logFor(routine.id, extra.day)
+      if (extra.subtaskId) {
+        if (!log?.done.includes(extra.subtaskId)) app.toggle(routine, extra.day, extra.subtaskId)
+      } else if (!log?.complete) {
+        app.setRoutineDone(routine, extra.day, true)
+      }
+      // Angezeigte Erinnerungen räumt der folgende Abgleich weg (nicht mehr fällig).
+      return
+    }
+  }
+
+  if (actionId === 'tap' || actionId === 'done' || actionId === 'snooze') {
+    if (extra.url) {
+      location.hash = extra.url
+    } else {
+      app.selectedDay = extra.day ?? app.today
+      location.hash = '#/heute'
+    }
   }
 }
 
-/** Aufgabe ist (noch) fällig: offen und Erinnerungszeit erreicht. */
-function isStillDue(todoId: string): boolean {
-  const t = app.todos.find((x) => x.id === todoId)
-  return !!t && !t.doneOn && !!t.remindAt && remindTime(t.remindAt) <= Date.now()
+/** Ist das, woran die Benachrichtigung erinnert, noch offen? */
+function stillDue(extra: NotificationExtra): boolean {
+  if (extra.todoId) {
+    const t = app.todos.find((x) => x.id === extra.todoId)
+    return !!t && !t.doneOn && !!t.remindAt && remindTime(t.remindAt) <= Date.now()
+  }
+  if (extra.routineId && extra.day) {
+    const r = app.routines.find((x) => x.id === extra.routineId)
+    const log = app.logFor(extra.routineId, extra.day)
+    if (!r || log?.complete) return false
+    return !extra.subtaskId || !log?.done.includes(extra.subtaskId)
+  }
+  return false
 }
 
 let timer: ReturnType<typeof setTimeout> | undefined
@@ -48,7 +79,7 @@ export function scheduleReminderSync() {
       summaryRoutines: s.summaryRoutines,
       dayStartHour: s.dayStartHour,
     })
-    void syncReminders(plan, s.stickyReminders, isStillDue).catch((e) =>
+    void syncReminders(plan, s.stickyReminders, stillDue).catch((e) =>
       console.error('Erinnerungen konnten nicht geplant werden', e),
     )
   }, 400)

@@ -9,8 +9,16 @@ export type Schedule =
 export interface Subtask {
   id: string
   title: string
+  /** Emoji vor dem Titel. */
+  emoji?: string
   /** Optional eingeschränkt auf Wochentage, sonst immer, wenn die Routine fällig ist. */
   days?: Weekday[]
+  /** Zählt nicht für „erledigt“ (Kür statt Pflicht). */
+  optional?: boolean
+  /** Uhrzeit "HH:MM": ab dann erinnern. */
+  time?: string
+  /** Wichtig: ab `time` alle N Minuten erinnern, bis erledigt. */
+  nag?: number
 }
 
 export interface Routine {
@@ -19,6 +27,10 @@ export interface Routine {
   notes?: string
   /** Optionale Uhrzeit "HH:MM" als Orientierung, z. B. "07:00". */
   time?: string
+  /** Akzentfarbe aus der Palette (siehe colors.ts). */
+  color?: string
+  /** Erinnerung zur Uhrzeit; `every` > 0 wiederholt alle N Minuten, bis erledigt. */
+  reminder?: { every: number }
   schedule: Schedule
   subtasks: Subtask[]
   /** Routine gilt erst ab diesem Tag (Streaks und Verlauf beginnen hier). */

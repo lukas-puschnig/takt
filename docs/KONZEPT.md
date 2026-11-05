@@ -49,6 +49,15 @@ Wiederkehrende Aufgaben nach dem Vorbild der Habitica-Dailies, aber ohne Spielme
 
 ---
 
+**Erweiterungen (umgesetzt)** ✅
+
+- **Optionale Schritte:** zählen nicht für „erledigt“. Ring voll, sobald die Pflicht erledigt ist, aber blasser und mit „+N“, bis auch die optionalen abgehakt sind; dann satt mit Häkchen. Optionale Schritte haben einen gestrichelten Kreis. Sind alle Schritte optional, zählen alle.
+- **Emoji pro Schritt** (Auswahl oder eigenes über die Tastatur).
+- **Uhrzeit pro Schritt** (eine Erinnerung) und **„Wichtig“**: ab der Uhrzeit alle 5/10/15/30/60 min erinnern, bis abgehakt (Button „Erledigt“ in der Benachrichtigung).
+- **Routine-Erinnerung:** zur Uhrzeit einmal oder wiederholt, bis die Routine erledigt ist.
+- **Akzentfarben** aus einer Palette von acht Tönen (`--routine-*` in tokens.css, hell/dunkel abgestimmt).
+- **Sortieren per Griff** (Ziehen) für Schritte im Editor und Routinen in den Einstellungen.
+
 ## 1b. Aufgaben (To-dos) ✅
 
 Einmalige Aufgaben neben den Routinen, nach dem Vorbild der Habitica-To-dos.
@@ -83,7 +92,13 @@ Einmalige Aufgaben neben den Routinen, nach dem Vorbild der Habitica-To-dos.
 - Android: Benachrichtigung + Vibration ja. Eine echte **„ongoing“-Benachrichtigung**, die man nicht wegwischen kann, gibt es im Web nicht.
 - Ist die App eingefroren oder geschlossen, kann sie zur Endzeit nichts auslösen. Abhilfe: Bildschirm wach halten, oder später **Web Push** (braucht einen kleinen Server, der zur Endzeit pusht) bzw. eine **native Hülle mit Capacitor** (lokal geplante Benachrichtigungen, „ongoing“, Vibration – auch iOS).
 
-**Planer (noch offen)**
+**Ergänzt** ✅
+
+- **Taktlänge per Drehring:** vor dem Start am Ring drehen (5–120 min, 5er-Schritte) oder Schnellwahl 15/25/45/50/90. Gilt auch für die folgenden Takte der Serie.
+- **Pausenaufgabe:** „Und in der Pause danach?“ frei oder per Vorschlag (Mini-Übungen); erscheint in der Pause im Ring und in der Benachrichtigung am Taktende.
+- **Tag planen:** Von–Bis (Standard: jetzt bis +3 h) und Regler 0–100 % Deep Work. Die Taktlänge wird zwischen den Voreinstellungen Normal und Deep gemischt, die Anzahl der Takte gewählt und alle Takte gleichmäßig gestreckt, sodass das Fenster genau aufgeht (`src/lib/focus/plan.ts`). Der Plan läuft ohne Nachfrage durch.
+
+**Planer (ursprüngliche Notizen)**
 
 **Funktionen**
 

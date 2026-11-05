@@ -1,5 +1,7 @@
 <script lang="ts">
-  import { ArrowDown, ArrowUp, BellRing, Download, Smartphone, Upload } from '@lucide/svelte'
+  import { BellRing, Download, GripVertical, Smartphone, Upload } from '@lucide/svelte'
+  import { sortable } from '../lib/actions/sortable'
+  import { routineColor } from '../lib/routines/colors'
   import NativeSettings from '../components/settings/NativeSettings.svelte'
   import { isNative } from '../lib/native/notifications'
   import type { Weekday } from '../lib/date'
@@ -264,9 +266,27 @@
   <div class="flex flex-col gap-3 card">
     <h2 class="text-heading">Reihenfolge</h2>
     {#if app.routines.length}
-      <ul class="flex flex-col">
-        {#each app.routines as routine, i (routine.id)}
-          <li class="flex min-h-11 items-center gap-2 border-b border-border py-1 last:border-0">
+      <ul
+        class="flex flex-col"
+        use:sortable={{ onmove: (from, to) => app.reorderRoutines(from, to) }}
+      >
+        {#each app.routines as routine (routine.id)}
+          <li
+            data-sort
+            class="flex min-h-12 items-center gap-2 rounded-md border-b border-border py-1 last:border-0"
+          >
+            <span
+              data-handle
+              class="grid h-11 w-8 shrink-0 place-items-center text-text-muted"
+              role="img"
+              aria-label="Zum Verschieben ziehen"
+            >
+              <GripVertical size={18} />
+            </span>
+            <span
+              class="size-2.5 shrink-0 rounded-full"
+              style:background={routineColor(routine.color)}
+            ></span>
             <span class="flex-1">
               <span class="block">{routine.title}</span>
               <span class="block text-small text-text-muted">
@@ -275,24 +295,6 @@
                   : describeSchedule(routine.schedule, app.settings.weekStart)}
               </span>
             </span>
-            <button
-              type="button"
-              class="grid size-11 place-items-center rounded-full text-text-muted disabled:opacity-30"
-              aria-label="Nach oben"
-              disabled={i === 0}
-              onclick={() => app.moveRoutine(routine.id, -1)}
-            >
-              <ArrowUp size={18} />
-            </button>
-            <button
-              type="button"
-              class="grid size-11 place-items-center rounded-full text-text-muted disabled:opacity-30"
-              aria-label="Nach unten"
-              disabled={i === app.routines.length - 1}
-              onclick={() => app.moveRoutine(routine.id, 1)}
-            >
-              <ArrowDown size={18} />
-            </button>
           </li>
         {/each}
       </ul>

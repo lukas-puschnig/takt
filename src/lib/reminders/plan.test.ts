@@ -1,7 +1,15 @@
 import { describe, expect, it } from 'vitest'
 import type { Routine } from '../routines/types'
 import type { Todo } from '../todos/types'
-import { planReminders, SUMMARY_ID, todoNotificationId, TODO_ID_MIN } from './plan'
+import {
+  atOnDay,
+  MAX_REPEATS,
+  planReminders,
+  planRoutineReminders,
+  SUMMARY_ID,
+  todoNotificationId,
+  TODO_ID_MIN,
+} from './plan'
 
 // Mittwoch, 4.11.2026, 10:00 Ortszeit
 const NOW = new Date(2026, 10, 4, 10, 0).getTime()
@@ -66,6 +74,42 @@ describe('planReminders', () => {
     const plan = planReminders(NOW, [], [evening], logs, { ...OPTS, dailyReminder: '21:00' })
     expect(plan[0].at).toBe(new Date(2026, 10, 5, 21, 0).getTime())
     expect(plan[0].body).toBe('Abends')
+  })
+
+  it('erinnert an Routinen wiederholt, bis sie erledigt sind', () => {
+    const r: Routine = { ...evening, time: '10:30', reminder: { every: 15 } }
+    const plan = planRoutineReminders(NOW, [r], {}, 3, 1)
+    expect(plan[0]).toMatchObject({ kind: 'routine', routineId: 'r', title: 'Abends' })
+    expect(plan[0].at).toBe(new Date(2026, 10, 4, 10, 30).getTime())
+    expect(plan[1].at - plan[0].at).toBe(15 * 60_000)
+    expect(plan).toHaveLength(MAX_REPEATS)
+    const done = { '2026-11-04': { r: { done: ['_self'], complete: true } } }
+    expect(planRoutineReminders(NOW, [r], done, 3, 1)).toEqual([])
+  })
+
+  it('nervt bei wichtigen Schritten ab der Uhrzeit und hört nach dem Abhaken auf', () => {
+    const r: Routine = {
+      ...evening,
+      subtasks: [
+        { id: 'pill', title: 'Tablette', emoji: '💊', time: '22:00', nag: 10 },
+        { id: 'tea', title: 'Tee', time: '21:00' },
+      ],
+    }
+    const plan = planRoutineReminders(NOW, [r], {}, 3, 1)
+    const pill = plan.filter((p) => p.subtaskId === 'pill')
+    expect(pill[0]).toMatchObject({ title: '💊 Tablette', body: 'Abends · wichtig' })
+    // 22:00 bis Tagesgrenze 3:00 alle 10 min, höchstens MAX_REPEATS
+    expect(pill).toHaveLength(Math.min(30, MAX_REPEATS))
+    expect(plan.filter((p) => p.subtaskId === 'tea')).toHaveLength(1)
+    const logs = { '2026-11-04': { r: { done: ['pill'], complete: false } } }
+    expect(planRoutineReminders(NOW, [r], logs, 3, 1).some((p) => p.subtaskId === 'pill')).toBe(
+      false,
+    )
+  })
+
+  it('legt Uhrzeiten vor der Tagesgrenze auf den Folgetag', () => {
+    expect(atOnDay('2026-11-04', '01:30', 3)).toBe(new Date(2026, 10, 5, 1, 30).getTime())
+    expect(atOnDay('2026-11-04', '07:00', 3)).toBe(new Date(2026, 10, 4, 7, 0).getTime())
   })
 
   it('vergibt stabile IDs im Aufgabenbereich', () => {
