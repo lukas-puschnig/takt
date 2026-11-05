@@ -8,7 +8,9 @@
   let { checked = $bindable(), label, hint }: Props = $props()
 </script>
 
-<label class="flex min-h-11 cursor-pointer items-center justify-between gap-4">
+<!-- relative: Das unsichtbare Häkchenfeld bleibt im Label. Sonst liegt es außerhalb der
+     scrollbaren Fläche, und beim Fokussieren scrollt der Browser das ganze Sheet weg. -->
+<label class="relative flex min-h-11 cursor-pointer items-center justify-between gap-4">
   <span>
     <span class="block">{label}</span>
     {#if hint}<span class="block text-small text-text-muted">{hint}</span>{/if}

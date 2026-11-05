@@ -20,7 +20,7 @@
 
 <dialog
   bind:this={dialog}
-  class="sheet m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-hidden rounded-t-lg bg-surface p-0 text-text shadow-card sm:m-auto sm:max-w-lg sm:rounded-lg"
+  class="sheet m-0 mt-auto max-h-[92dvh] w-full max-w-none overflow-clip rounded-t-lg bg-surface p-0 text-text shadow-card sm:m-auto sm:max-w-lg sm:rounded-lg"
   aria-label={title}
   onclose={() => (open = false)}
   onclick={(e) => e.target === dialog && (open = false)}
