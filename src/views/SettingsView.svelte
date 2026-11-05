@@ -2,6 +2,7 @@
   import { BellRing, Download, GripVertical, Smartphone, Upload } from '@lucide/svelte'
   import { sortable } from '../lib/actions/sortable'
   import { routineColor } from '../lib/routines/colors'
+  import BreakIdeas from '../components/settings/BreakIdeas.svelte'
   import NativeSettings from '../components/settings/NativeSettings.svelte'
   import { isNative } from '../lib/native/notifications'
   import type { Weekday } from '../lib/date'
@@ -160,6 +161,7 @@
       label="Nächsten Takt automatisch starten"
       hint="Sonst wartet der Timer nach jeder Pause auf dich."
     />
+    <BreakIdeas />
   </div>
 
   {#if isNative}

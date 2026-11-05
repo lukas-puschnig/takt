@@ -13,7 +13,7 @@
   import TimerDial from '../components/focus/TimerDial.svelte'
   import CheckCircle from '../components/ui/CheckCircle.svelte'
   import Segmented from '../components/ui/Segmented.svelte'
-  import { BREAK_IDEAS, QUICK_MINUTES } from '../lib/focus/breaks'
+  import { QUICK_MINUTES } from '../lib/focus/breaks'
   import type { DayPlan } from '../lib/focus/plan'
   import {
     clockTime,
@@ -187,8 +187,11 @@
       {minutes}
       onchange={(m) => focus.setMinutes(m)}
     >
-      <div class="flex flex-col items-center gap-1 px-10 text-center">
-        <span class="timer">{formatClock(focus.remaining)}</span>
+      <div class="flex flex-col items-center gap-1 px-6 text-center">
+        <!-- Ab 100:00 (dreistellig) kleiner, damit die Zeit in den Ring passt -->
+        <span class={['timer', Math.ceil(focus.remaining / 1000) >= 6000 && 'long']}>
+          {formatClock(focus.remaining)}
+        </span>
         {#if isBreak && run?.breakTask}
           <span class="flex items-center gap-1 text-small text-text">
             <Coffee size={14} class="shrink-0 text-accent" />{run.breakTask}
@@ -255,7 +258,7 @@
         <input class="field bg-surface" bind:value={breakTask} placeholder="z. B. Seated Twist" />
       </label>
       <div class="flex flex-wrap gap-2">
-        {#each BREAK_IDEAS as idea (idea)}
+        {#each app.settings.breakIdeas as idea (idea)}
           <button
             type="button"
             class={chip(breakTask === idea)}
@@ -418,5 +421,8 @@
     letter-spacing: -0.02em;
     line-height: 1;
     font-variant-numeric: tabular-nums;
+  }
+  .timer.long {
+    font-size: min(var(--text-timer), 56px);
   }
 </style>

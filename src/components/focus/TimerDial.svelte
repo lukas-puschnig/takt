@@ -79,7 +79,8 @@
 <div
   bind:this={el}
   class={[
-    'relative select-none',
+    // Rand, damit der Griff (r = 11) am Ring links/rechts nicht am Bildschirm klebt.
+    'relative m-2 shrink-0 select-none',
     adjustable && 'cursor-grab touch-none',
     dragging && 'cursor-grabbing',
   ]}
@@ -101,7 +102,13 @@
     {@render children?.()}
   </ProgressRing>
   {#if adjustable}
-    <svg class="pointer-events-none absolute inset-0" width={size} height={size} aria-hidden="true">
+    <!-- overflow-visible: Der Griff ragt über den Ring hinaus und darf nicht abgeschnitten werden. -->
+    <svg
+      class="pointer-events-none absolute inset-0 overflow-visible"
+      width={size}
+      height={size}
+      aria-hidden="true"
+    >
       <circle
         cx={knob.x}
         cy={knob.y}

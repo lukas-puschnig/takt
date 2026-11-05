@@ -1,4 +1,7 @@
-/** Vorschläge für die Pause: bürotaugliche Mini-Übungen und kleine Auszeiten (KONZEPT §2). */
+/**
+ * Standard-Vorschläge für die Pause: bürotaugliche Mini-Übungen und kleine Auszeiten
+ * (KONZEPT §2). Die eigene Liste steht in den Einstellungen (settings.breakIdeas).
+ */
 export const BREAK_IDEAS = [
   'Seated Twist',
   'Brust öffnen an der Tür',

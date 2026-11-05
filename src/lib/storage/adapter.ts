@@ -1,4 +1,5 @@
 import type { Weekday } from '../date'
+import { BREAK_IDEAS } from '../focus/breaks'
 import {
   DEFAULT_PROFILES,
   type FocusMode,
@@ -22,6 +23,8 @@ export interface Settings {
   profiles: Record<FocusMode, FocusProfile>
   /** Nach der Pause den nächsten Takt sofort starten. */
   autoStartFocus: boolean
+  /** Vorschläge für „Und in der Pause danach?“, in dieser Reihenfolge. */
+  breakIdeas: string[]
 
   /** Systembenachrichtigung am Ende einer Phase. */
   notify: boolean
@@ -70,6 +73,7 @@ export const DEFAULT_SETTINGS: Settings = {
   vibrate: true,
   sound: true,
   wakeLock: true,
+  breakIdeas: [...BREAK_IDEAS],
   dailyReminder: '',
   summaryRoutines: true,
   stickyReminders: true,
@@ -85,6 +89,10 @@ export function normalize(raw: unknown): AppData | null {
     deep: { ...DEFAULT_PROFILES.deep, ...data.settings?.profiles?.deep },
     normal: { ...DEFAULT_PROFILES.normal, ...data.settings?.profiles?.normal },
   }
+  const ideas = data.settings?.breakIdeas
+  settings.breakIdeas = Array.isArray(ideas)
+    ? ideas.filter((x): x is string => typeof x === 'string' && !!x.trim())
+    : [...BREAK_IDEAS]
   return {
     version: 1,
     routines: Array.isArray(data.routines) ? data.routines : [],
