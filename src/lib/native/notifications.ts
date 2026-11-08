@@ -160,7 +160,10 @@ export async function syncReminders(
   // Angezeigte Meldungen nicht durch Neuplanen derselben ID entfernen.
   const shown = new Set(delivered.filter((n) => !gone.includes(n)).map((n) => n.id))
   const fresh = plan.filter((r) => !shown.has(r.id))
-  await planCleanup('reminders', fresh.filter((r) => r.group).map((r) => r.at))
+  await planCleanup(
+    'reminders',
+    fresh.filter((r) => r.group).map((r) => r.at),
+  )
   if (!fresh.length) return
   await LocalNotifications.schedule({
     notifications: fresh.map((r): LocalNotificationSchema => {
@@ -248,7 +251,10 @@ export async function syncTimer(
   const shown = new Set(delivered.filter((n) => !hit.includes(n)).map((n) => n.id))
   const free = TIMER_END_IDS.filter((id) => !shown.has(id))
   const planned = alerts.slice(0, free.length)
-  await planCleanup('timer', planned.map((a) => a.at))
+  await planCleanup(
+    'timer',
+    planned.map((a) => a.at),
+  )
   const notifications: LocalNotificationSchema[] = planned.map((a, i) => ({
     id: free[i],
     title: a.title,
