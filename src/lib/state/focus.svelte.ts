@@ -10,6 +10,7 @@ import {
   start,
   startReady,
   isFinished,
+  overtimeMs,
   setFocusLength,
   stop,
   upcoming,
@@ -71,6 +72,8 @@ class FocusTimer {
     this.customMinutes ? this.customMinutes * 60_000 : phaseMs(this.profile, 'focus'),
   )
   remaining = $derived(this.run ? remainingMs(this.run, this.now) : this.#idleMs)
+  /** Wie lange der abgelaufene Takt schon in Überzeit ist. */
+  overtime = $derived(this.run ? overtimeMs(this.run, this.now) : 0)
   duration = $derived(this.run?.duration ?? this.#idleMs)
 
   init() {
@@ -109,7 +112,8 @@ class FocusTimer {
   }
 
   #log(e: PhaseEnd) {
-    if (e.phase !== 'focus') return
+    // Ein Takt in Überzeit wird erst protokolliert, wenn man weitermacht (inkl. Überzeit).
+    if (e.phase !== 'focus' || e.overtime) return
     const minutes = Math.round(e.elapsed / 60_000)
     if (minutes < 1) return
     const id = app.addSession({
@@ -129,6 +133,10 @@ class FocusTimer {
     if (isFinished(run)) return 'Tagesplan geschafft.'
     if (run.status === 'ready') return 'Der nächste Takt wartet auf dich.'
     if (run.status === 'paused') return `${PHASE_LABEL[run.phase]} pausiert.`
+    if (run.status === 'overtime') {
+      const goal = run.goal ? `${run.goal} · ` : ''
+      return `${goal}Überzeit seit ${clockTime(run.endsAt)}. Pause startest du in der App.`
+    }
     const what =
       run.phase === 'focus'
         ? run.goal
@@ -148,7 +156,7 @@ class FocusTimer {
     if (s.vibrate) vibrate(PATTERN)
     if (s.sound) chime(focusEnded)
     if (s.notify) {
-      void notify(focusEnded ? 'Zeit für eine Pause.' : 'Pause vorbei.', {
+      void notify(focusEnded ? 'Takt ist um.' : 'Pause vorbei.', {
         body: this.#describe(run),
         tag: TIMER_TAG,
         renotify: true,
@@ -163,7 +171,7 @@ class FocusTimer {
   /** Speichern, Wake Lock und stehende Benachrichtigung an den Zustand anpassen. */
   async #sync(updateStatus = true) {
     this.#save()
-    const running = this.run?.status === 'running'
+    const running = this.run?.status === 'running' || this.run?.status === 'overtime'
     void keepAwake(running && app.settings.wakeLock)
     if (isNative) return this.#syncNative(updateStatus)
     if (!this.run) return clearNotifications(TIMER_TAG)
@@ -189,7 +197,7 @@ class FocusTimer {
       run && s.notify
         ? upcoming(run, s.profiles[run.mode], s.autoStartFocus).map((u) => ({
             at: u.at,
-            title: u.ended === 'focus' ? 'Zeit für eine Pause.' : 'Pause vorbei.',
+            title: u.ended === 'focus' ? 'Takt ist um.' : 'Pause vorbei.',
             body: this.#describe(u.next),
           }))
         : []
@@ -228,7 +236,7 @@ class FocusTimer {
     void this.#sync()
   }
 
-  /** Tagesplan sofort starten; Takte und Pausen laufen ohne Nachfrage durch. */
+  /** Tagesplan sofort starten; nach jeder Pause startet der nächste Takt ohne Nachfrage. */
   startPlan(plan: DayPlan, opts: TaskOptions = {}) {
     if (!plan.blocks.length) return
     unlockAudio()

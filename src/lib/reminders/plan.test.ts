@@ -58,15 +58,22 @@ describe('planReminders', () => {
       todo('Call', { day: '2026-11-05' }),
       todo('Fertig', { day: '2026-11-04', doneOn: '2026-11-04' }),
     ]
-    const plan = planReminders(NOW, todos, [], {}, { ...OPTS, dailyReminder: '18:00' })
+    const opts = { ...OPTS, dailyReminder: '18:00' }
+    const plan = planReminders(NOW, todos, [], {}, opts)
     expect(plan[0]).toMatchObject({
-      id: SUMMARY_ID,
       at: new Date(2026, 10, 4, 18, 0).getTime(),
       title: 'Noch 1 Sache offen',
       body: 'Steuer',
+      group: 'takt:summary',
     })
     expect(plan[1]).toMatchObject({ title: 'Noch 2 Sachen offen', body: 'Steuer, Call' })
     expect(plan).toHaveLength(8)
+    // IDs hängen am Kalendertag, nicht an der Position: morgen bleibt dieselbe ID
+    const ids = plan.map((p) => p.id)
+    expect(new Set(ids).size).toBe(8)
+    ids.forEach((id) => expect(id).toBeGreaterThanOrEqual(SUMMARY_ID))
+    const tomorrow = planReminders(NOW + 86_400_000, todos, [], {}, opts)
+    expect(tomorrow[0].id).toBe(plan[1].id)
   })
 
   it('zählt erledigte Routinen heute nicht mehr', () => {

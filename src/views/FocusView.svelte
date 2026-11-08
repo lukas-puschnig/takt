@@ -66,10 +66,15 @@
     return run.phase === 'long' && r === 0 ? dots : r
   })
 
+  const overtime = $derived(run?.status === 'overtime')
+  /** Im Tagesplan folgt auf den letzten Takt keine Pause mehr. */
+  const lastBlock = $derived(run?.blocks ? run.round + 1 >= run.blocks.length : false)
+
   const label = $derived.by(() => {
     if (!run) return 'Bereit'
     if (finished) return 'Geschafft'
     if (run.status === 'ready') return 'Nächster Takt'
+    if (overtime) return 'Überzeit'
     return PHASE_LABEL[run.phase]
   })
   const hint = $derived.by(() => {
@@ -81,6 +86,7 @@
     const planEnd = run.blocks
       ? ` · Takt ${Math.min(run.round + (run.phase === 'focus' ? 1 : 0), dots)} von ${dots}`
       : ''
+    if (overtime) return `Takt war um ${clockTime(run.endsAt)} um${planEnd}`
     return `bis ${clockTime(run.endsAt)}${planEnd}`
   })
 
@@ -121,7 +127,7 @@
   }
 
   function stop() {
-    if (run && run.status !== 'ready' && run.phase === 'focus') {
+    if (run && (run.status === 'running' || run.status === 'paused') && run.phase === 'focus') {
       if (!confirm('Takt beenden? Die bisherige Zeit wird gespeichert.')) return
     }
     focus.stop()
@@ -189,9 +195,18 @@
     >
       <div class="flex flex-col items-center gap-1 px-6 text-center">
         <!-- Ab 100:00 (dreistellig) kleiner, damit die Zeit in den Ring passt -->
-        <span class={['timer', Math.ceil(focus.remaining / 1000) >= 6000 && 'long']}>
-          {formatClock(focus.remaining)}
-        </span>
+        {#if overtime}
+          <span
+            class={['timer text-primary', Math.ceil(focus.overtime / 1000) >= 6000 && 'long']}
+            aria-label="Überzeit"
+          >
+            +{formatClock(focus.overtime)}
+          </span>
+        {:else}
+          <span class={['timer', Math.ceil(focus.remaining / 1000) >= 6000 && 'long']}>
+            {formatClock(focus.remaining)}
+          </span>
+        {/if}
         {#if isBreak && run?.breakTask}
           <span class="flex items-center gap-1 text-small text-text">
             <Coffee size={14} class="shrink-0 text-accent" />{run.breakTask}
@@ -303,6 +318,14 @@
       <button type="button" class="btn btn-primary" onclick={begin}>
         <Play size={20} />
         {run ? 'Takt starten' : 'Starten'}
+      </button>
+    {:else if overtime}
+      <button type="button" class="btn btn-primary" onclick={() => focus.skip()}>
+        {#if lastBlock}
+          Takt abschließen
+        {:else}
+          <Coffee size={20} /> Pause starten
+        {/if}
       </button>
     {:else if run?.status === 'running'}
       <button type="button" class="btn btn-primary" onclick={() => focus.pause()}>

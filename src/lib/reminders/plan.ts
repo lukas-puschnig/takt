@@ -16,9 +16,12 @@ export interface PlannedReminder {
   routineId?: string
   subtaskId?: string
   day?: DateKey
-  /** Wiederholte Erinnerungen derselben Sache werden gebündelt. */
+  /** Erinnerungen derselben Sache ersetzen sich: angezeigt bleibt nur die neueste. */
   group?: string
 }
+
+/** Gruppen mit diesem Präfix räumt die Android-App auf (NotificationCleanup.java). */
+export const GROUP_PREFIX = 'takt:'
 
 export interface ReminderOptions {
   /** Tägliche Erinnerung an Offenes, "HH:MM" oder leer = aus. */
@@ -30,6 +33,19 @@ export interface ReminderOptions {
 
 /** Feste IDs (klein) für Timer, 100–199 für die Tageserinnerung, ab 1000 für den Rest. */
 export const SUMMARY_ID = 100
+/**
+ * Tageserinnerungen rotieren über so viele IDs (je Kalendertag eine). Neu planen mit einer
+ * ID, die gerade angezeigt wird, würde die Anzeige entfernen; bei 8 Tagen Vorlauf kollidiert
+ * so höchstens eine über eine Woche alte Meldung.
+ */
+const SUMMARY_SLOTS = 16
+
+const summaryId = (date: Date) => {
+  const day = Math.round(
+    new Date(date.getFullYear(), date.getMonth(), date.getDate()).getTime() / 86_400_000,
+  )
+  return SUMMARY_ID + (((day % SUMMARY_SLOTS) + SUMMARY_SLOTS) % SUMMARY_SLOTS)
+}
 export const TODO_ID_MIN = 1000
 /** Android begrenzt geplante Alarme pro App (ca. 500); wir bleiben deutlich darunter. */
 export const MAX_PLANNED = 400
@@ -106,7 +122,7 @@ export function planRoutineReminders(
           body: open.length ? `Noch offen: ${list(open.map(label))}` : 'Steht noch aus',
           routineId: r.id,
           day,
-          group: `r:${r.id}`,
+          group: `${GROUP_PREFIX}r:${r.id}`,
         })
       }
       for (const s of subtasksFor(r, day)) {
@@ -118,7 +134,7 @@ export function planRoutineReminders(
           routineId: r.id,
           subtaskId: s.id,
           day,
-          group: `s:${s.id}`,
+          group: `${GROUP_PREFIX}s:${r.id}:${s.id}`,
         })
       }
     }
@@ -192,11 +208,12 @@ export function planReminders(
       if (!parts.length) continue
       const n = openTodos.length + openRoutines.length
       out.push({
-        id: SUMMARY_ID + i,
+        id: summaryId(date),
         at,
         title: n === 1 ? 'Noch 1 Sache offen' : `Noch ${n} Sachen offen`,
         body: parts.join(' · '),
         kind: 'summary',
+        group: `${GROUP_PREFIX}summary`,
       })
     }
   }

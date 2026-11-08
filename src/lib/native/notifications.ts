@@ -2,12 +2,34 @@
  * Systembenachrichtigungen der Android-App (Capacitor). Im Browser sind alle Funktionen
  * wirkungslos; dort gelten weiter die Web-Signale aus signals.ts.
  */
-import { Capacitor } from '@capacitor/core'
+import { Capacitor, registerPlugin } from '@capacitor/core'
 import { LocalNotifications, type LocalNotificationSchema } from '@capacitor/local-notifications'
 import type { PlannedReminder } from '../reminders/plan'
-import { TODO_ID_MIN } from '../reminders/plan'
+import { GROUP_PREFIX, TODO_ID_MIN } from '../reminders/plan'
 
 export const isNative = Capacitor.isNativePlatform()
+
+/**
+ * Eigenes Plugin der Android-Hülle (NotificationCleanup.java): lässt je Gruppe nur die
+ * neueste Meldung stehen, damit sich Wiederholungen ersetzen statt stapeln.
+ */
+interface CleanupPlugin {
+  plan(options: { key: string; at: number[] }): Promise<void>
+  cleanup(): Promise<void>
+}
+const Cleanup = registerPlugin<CleanupPlugin>('TaktCleanup')
+
+/** Ältere APKs kennen das Plugin noch nicht; dann bleibt es beim Stapeln. */
+async function planCleanup(key: string, at: number[]) {
+  try {
+    await Cleanup.plan({ key, at })
+    await Cleanup.cleanup()
+  } catch {
+    /* Plugin fehlt */
+  }
+}
+
+const TIMER_GROUP = `${GROUP_PREFIX}timer`
 
 export const CHANNEL = {
   reminders: 'takt-reminders',
@@ -114,6 +136,8 @@ export async function openExactAlarmSettings() {
 /**
  * Ersetzt alle geplanten Erinnerungen durch `plan`. Bereits angezeigte Erinnerungen an
  * Aufgaben und Routinen verschwinden, sobald `stillDue` sie nicht mehr als fällig meldet.
+ * Achtung: Das Plugin entfernt beim Planen eine angezeigte Meldung mit derselben ID –
+ * deshalb nie IDs neu vergeben, die gerade angezeigt werden (siehe plan.ts).
  */
 export async function syncReminders(
   plan: PlannedReminder[],
@@ -133,9 +157,13 @@ export async function syncReminders(
   )
   if (gone.length) await LocalNotifications.removeDeliveredNotifications({ notifications: gone })
 
-  if (!plan.length) return
+  // Angezeigte Meldungen nicht durch Neuplanen derselben ID entfernen.
+  const shown = new Set(delivered.filter((n) => !gone.includes(n)).map((n) => n.id))
+  const fresh = plan.filter((r) => !shown.has(r.id))
+  await planCleanup('reminders', fresh.filter((r) => r.group).map((r) => r.at))
+  if (!fresh.length) return
   await LocalNotifications.schedule({
-    notifications: plan.map((r): LocalNotificationSchema => {
+    notifications: fresh.map((r): LocalNotificationSchema => {
       const base = {
         id: r.id,
         title: r.title,
@@ -162,7 +190,7 @@ export async function syncReminders(
           autoCancel: true,
         }
       }
-      return { ...base, extra: { url: '#/heute' }, autoCancel: true }
+      return { ...base, group: r.group, extra: { url: '#/heute' }, autoCancel: true }
     }),
   })
 }
@@ -212,18 +240,25 @@ export async function syncTimer(
   await LocalNotifications.cancel({
     notifications: [TIMER_STATUS_ID, ...TIMER_END_IDS].map((id) => ({ id })),
   })
-  await removeDelivered(clearDelivered ? [TIMER_STATUS_ID, ...TIMER_END_IDS] : [TIMER_STATUS_ID])
-  const notifications: LocalNotificationSchema[] = alerts
-    .slice(0, TIMER_END_IDS.length)
-    .map((a, i) => ({
-      id: TIMER_END_IDS[i],
-      title: a.title,
-      body: a.body,
-      channelId: CHANNEL.timer,
-      schedule: { at: new Date(a.at), allowWhileIdle: true },
-      extra: { url: '#/fokus' },
-      autoCancel: true,
-    }))
+  const { notifications: delivered } = await LocalNotifications.getDeliveredNotifications()
+  const clear = clearDelivered ? [TIMER_STATUS_ID, ...TIMER_END_IDS] : [TIMER_STATUS_ID]
+  const hit = delivered.filter((n) => clear.includes(n.id))
+  if (hit.length) await LocalNotifications.removeDeliveredNotifications({ notifications: hit })
+  // Noch angezeigte Ende-Meldungen behalten ihre ID; neu planen würde sie sonst entfernen.
+  const shown = new Set(delivered.filter((n) => !hit.includes(n)).map((n) => n.id))
+  const free = TIMER_END_IDS.filter((id) => !shown.has(id))
+  const planned = alerts.slice(0, free.length)
+  await planCleanup('timer', planned.map((a) => a.at))
+  const notifications: LocalNotificationSchema[] = planned.map((a, i) => ({
+    id: free[i],
+    title: a.title,
+    body: a.body,
+    channelId: CHANNEL.timer,
+    group: TIMER_GROUP,
+    schedule: { at: new Date(a.at), allowWhileIdle: true },
+    extra: { url: '#/fokus' },
+    autoCancel: true,
+  }))
   if (status) {
     notifications.push({
       id: TIMER_STATUS_ID,

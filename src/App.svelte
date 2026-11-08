@@ -40,7 +40,11 @@
   })
 
   const timerBadge = $derived(
-    focus.run && focus.run.status !== 'ready' ? formatClock(focus.remaining) : null,
+    !focus.run || focus.run.status === 'ready'
+      ? null
+      : focus.run.status === 'overtime'
+        ? `+${formatClock(focus.overtime)}`
+        : formatClock(focus.remaining),
   )
 
   $effect(() => {

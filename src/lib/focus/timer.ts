@@ -28,8 +28,9 @@ export const PHASE_LABEL: Record<Phase, string> = {
 export interface TimerRun {
   mode: FocusMode
   phase: Phase
-  /** running: läuft bis endsAt · paused: angehalten · ready: wartet auf Start des Takts */
-  status: 'running' | 'paused' | 'ready'
+  /** running: läuft bis endsAt · paused: angehalten · ready: wartet auf Start des Takts ·
+   * overtime: Takt ist seit endsAt um und zählt weiter, bis man selbst die Pause startet */
+  status: 'running' | 'paused' | 'ready' | 'overtime'
   endsAt: number
   /** Restzeit, solange nicht `running`. */
   remaining: number
@@ -66,6 +67,8 @@ export interface PhaseEnd {
   at: number
   goal?: string
   todoId?: string
+  /** Takt ist abgelaufen und geht in Überzeit; protokolliert wird erst, wenn man weitermacht. */
+  overtime?: boolean
 }
 
 /** Ein protokollierter Fokus-Takt. */
@@ -184,6 +187,11 @@ export function remainingMs(run: TimerRun, now: number): number {
   return run.status === 'running' ? Math.max(0, run.endsAt - now) : run.remaining
 }
 
+/** Wie lange der Takt schon über seine Zeit läuft. */
+export function overtimeMs(run: TimerRun, now: number): number {
+  return run.status === 'overtime' ? Math.max(0, now - run.endsAt) : 0
+}
+
 export function pause(run: TimerRun, now: number): TimerRun {
   if (run.status !== 'running') return run
   return { ...run, status: 'paused', remaining: remainingMs(run, now) }
@@ -195,13 +203,18 @@ export function resume(run: TimerRun, now: number): TimerRun {
 }
 
 function ended(run: TimerRun, at: number, complete: boolean): PhaseEnd {
-  const elapsed = complete ? run.duration : run.duration - remainingMs(run, at)
+  const over = run.status === 'overtime'
+  const elapsed = over
+    ? run.duration + overtimeMs(run, at)
+    : complete
+      ? run.duration
+      : run.duration - remainingMs(run, at)
   return {
     phase: run.phase,
     mode: run.mode,
     startedAt: run.startedAt,
     elapsed,
-    complete,
+    complete: complete || over,
     at,
     goal: run.goal,
     todoId: run.todoId,
@@ -209,7 +222,7 @@ function ended(run: TimerRun, at: number, complete: boolean): PhaseEnd {
 }
 
 /**
- * Nächste Phase nach dem Ende der aktuellen.
+ * Nächste Phase nach der aktuellen (beim Weitermachen bzw. Überspringen).
  * Nach Fokus beginnt die Pause sofort; nach einer Pause wartet der nächste Takt
  * (oder startet sofort, wenn `autoFocus` oder ein Tagesplan läuft).
  */
@@ -233,6 +246,15 @@ export function next(
   return begin(run, 'focus', profile, at, autoFocus || !!run.blocks)
 }
 
+/**
+ * Was passiert, wenn die laufende Phase von selbst abläuft: Ein Takt geht in Überzeit
+ * (man macht vielleicht noch etwas fertig), eine Pause endet wie gewohnt.
+ */
+function expire(run: TimerRun, profile: FocusProfile, autoFocus: boolean): TimerRun {
+  if (run.phase === 'focus') return { ...run, status: 'overtime', remaining: 0 }
+  return next(run, profile, run.endsAt, autoFocus)
+}
+
 /** Holt alle Phasen nach, die bis `now` abgelaufen sind. */
 export function catchUp(
   run: TimerRun,
@@ -243,8 +265,9 @@ export function catchUp(
   const events: PhaseEnd[] = []
   // Obergrenze schützt vor Endlosschleifen bei kaputten Daten.
   for (let i = 0; i < 100 && run.status === 'running' && run.endsAt <= now; i++) {
-    events.push(ended(run, run.endsAt, true))
-    run = next(run, profile, run.endsAt, autoFocus)
+    const e = ended(run, run.endsAt, true)
+    events.push(run.phase === 'focus' ? { ...e, overtime: true } : e)
+    run = expire(run, profile, autoFocus)
   }
   return { run, events }
 }
@@ -262,14 +285,14 @@ export function upcoming(
   const out: { at: number; ended: Phase; next: TimerRun }[] = []
   let r = run
   while (out.length < limit && r.status === 'running') {
-    const n = next(r, profile, r.endsAt, autoFocus)
+    const n = expire(r, profile, autoFocus)
     out.push({ at: r.endsAt, ended: r.phase, next: n })
     r = n
   }
   return out
 }
 
-/** Aktuelle Phase vorzeitig beenden und zur nächsten springen. */
+/** Aktuelle Phase (vorzeitig oder aus der Überzeit) beenden und zur nächsten springen. */
 export function skip(
   run: TimerRun,
   profile: FocusProfile,
